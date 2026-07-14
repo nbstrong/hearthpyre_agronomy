@@ -24,46 +24,52 @@ namespace HearthpyreAgronomy
 			if (Initialized) return;
 
 			if (!AgronomyCatalog.Load()) return;
-			PatchBuild();
-			PatchGrowth();
+			if (!PatchBuild()) return;
+			if (!PatchGrowth()) return;
 			PatchDescription();
 			Initialized = true;
 		}
 
-		private static void PatchBuild()
+		private static bool PatchBuild()
 		{
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
 			if (target == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.Build; the signature may have changed.");
-				return;
+				return false;
 			}
 
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
 			Harmony.Patch(target, prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)));
+			return true;
 		}
 
-		private static void PatchDescription()
+		private static bool PatchDescription()
 		{
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) });
 			if (target == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent); the signature may have changed.");
-				return;
+				return false;
 			}
 
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
 			Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ShortDescriptionPostfix)));
+			return true;
 		}
 
-		private static void PatchGrowth()
+		private static bool PatchGrowth()
 		{
 			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
 			if (target == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
-				return;
+				return false;
 			}
 
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
 			Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix)));
+			return true;
 		}
 	}
 
@@ -127,17 +133,9 @@ namespace HearthpyreAgronomy
 					foreach (JSONNode node in items)
 					{
 						var blueprint = node["Value"]?.Value;
-						var harvestInto = node["HarvestInto"]?.Value;
-						if (string.IsNullOrEmpty(blueprint) || string.IsNullOrEmpty(harvestInto))
+						if (string.IsNullOrEmpty(blueprint))
 						{
-							MetricsManager.LogError("HearthpyreAgronomy skipped an invalid Agronomy entry in " + file + " because it is missing Value or HarvestInto.");
-							continue;
-						}
-
-						var hValue = node["HValue"]?.AsDouble ?? double.NaN;
-						if (double.IsNaN(hValue) || double.IsInfinity(hValue) || hValue <= 0)
-						{
-							MetricsManager.LogError("HearthpyreAgronomy skipped " + blueprint + " in " + file + " because HValue is missing or invalid.");
+							MetricsManager.LogError("HearthpyreAgronomy skipped an invalid Agronomy entry in " + file + " because it is missing Value.");
 							continue;
 						}
 
@@ -145,8 +143,8 @@ namespace HearthpyreAgronomy
 						{
 							Name = node["Name"]?.Value ?? blueprint,
 							Blueprint = blueprint,
-							HarvestInto = harvestInto,
-							HValue = hValue
+							HarvestInto = node["HarvestInto"]?.Value,
+							HValue = node["HValue"]?.AsDouble ?? double.NaN
 						};
 
 						if (DeclaredBlueprints.ContainsKey(entry.Blueprint))
@@ -220,6 +218,22 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			if (string.IsNullOrEmpty(entry.HarvestInto))
+			{
+				entry.Valid = false;
+				entry.ValidationError = "the HarvestInto field was missing";
+				MetricsManager.LogError("HearthpyreAgronomy skipped " + entry.Blueprint + " from " + file + " because the HarvestInto field was missing.");
+				return false;
+			}
+
+			if (double.IsNaN(entry.HValue) || double.IsInfinity(entry.HValue) || entry.HValue <= 0)
+			{
+				entry.Valid = false;
+				entry.ValidationError = "the HValue was missing or invalid";
+				MetricsManager.LogError("HearthpyreAgronomy skipped " + entry.Blueprint + " from " + file + " because HValue is missing or invalid.");
+				return false;
+			}
+
 			if (!GameObjectFactory.Factory.Blueprints.ContainsKey(entry.HarvestInto))
 			{
 				entry.Valid = false;
@@ -280,9 +294,9 @@ namespace HearthpyreAgronomy
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
 		}
 
-		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool Ripe)
+		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool newRipeStatus)
 		{
-			if (Ripe) return;
+			if (newRipeStatus) return;
 			if (__instance?.ParentObject == null) return;
 			if (!__instance.ParentObject.TryGetPart(out AgronomyGrowth growth)) return;
 
@@ -308,6 +322,16 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			if (!cell.IsClear())
+			{
+				if (!silent)
+				{
+					actor.Failure("There isn't enough room to build that.");
+				}
+
+				return false;
+			}
+
 			var created = GameObjectFactory.Factory.CreateObject(entry.Blueprint, blueprint.Brand);
 			if (created == null || !string.Equals(created.Blueprint, entry.Blueprint, StringComparison.Ordinal))
 			{
@@ -327,6 +351,13 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			var part = xyloschemer.GetPart<HearthpyreXyloschemer>();
+			if (part == null || !part.UseCharge(ChargeUse: blueprint.Cost, Silent: silent))
+			{
+				created.Destroy();
+				return false;
+			}
+
 			HoloZap(cell);
 			cell.RemoveObject(blueprint.ParentObject);
 			var obj = cell.Construct(created);
@@ -334,16 +365,6 @@ namespace HearthpyreAgronomy
 			{
 				cell.AddObject(blueprint.ParentObject);
 				created.Destroy();
-				Lattice.Invalidate(cell);
-				return false;
-			}
-
-			var part = xyloschemer.GetPart<HearthpyreXyloschemer>();
-			if (part == null || !part.UseCharge(ChargeUse: blueprint.Cost, Silent: silent))
-			{
-				cell.RemoveObject(obj);
-				obj.Destroy();
-				cell.AddObject(blueprint.ParentObject);
 				Lattice.Invalidate(cell);
 				return false;
 			}

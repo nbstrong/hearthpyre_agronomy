@@ -10,6 +10,8 @@ namespace XRL.World.Parts
 		public long GrowthTurns;
 		public long ReadyTurn;
 
+		public override bool AllowStaticRegistration() => true;
+
 		public override void Write(GameObject Basis, SerializationWriter Writer)
 		{
 			base.Write(Basis, Writer);
