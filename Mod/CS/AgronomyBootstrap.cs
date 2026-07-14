@@ -27,6 +27,11 @@ namespace HearthpyreAgronomy
 			if (!CanPatchAll()) return;
 			if (!PatchAll()) return;
 			Initialized = true;
+
+			if (!PatchDescription())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy initialized without the tooltip description patch.");
+			}
 		}
 
 		private static bool CanPatchAll()
@@ -43,12 +48,6 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
-			if (AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) }) == null)
-			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent); the signature may have changed.");
-				return false;
-			}
-
 			return true;
 		}
 
@@ -62,14 +61,6 @@ namespace HearthpyreAgronomy
 			if (!PatchGrowth())
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
-				UnpatchBuild();
-				return false;
-			}
-
-			if (!PatchDescription())
-			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent); the signature may have changed.");
-				UnpatchGrowth();
 				UnpatchBuild();
 				return false;
 			}
@@ -114,6 +105,11 @@ namespace HearthpyreAgronomy
 		private static bool PatchDescription()
 		{
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) });
+			if (target == null)
+			{
+				return false;
+			}
+
 			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
 
 			try
