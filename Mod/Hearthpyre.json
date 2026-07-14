@@ -5,16 +5,16 @@
       "Color": "&g",
       "Detail": "g",
       "Items": [
-        {"Name": "Arsplice Hyphae", "Value": "Arsplice Hyphae", "HarvestInto": "Arsplice Seed", "HValue": 350},
+        {"Name": "Arsplice Hyphae", "Value": "Arsplice Hyphae A", "HarvestInto": "Arsplice Seed", "HValue": 350},
         {"Name": "Banana Tree", "Value": "Banana Tree", "HarvestInto": "Banana", "HValue": 8},
         {"Name": "Bop Sponge", "Value": "Bop Sponge", "HarvestInto": "Bopcheek", "HValue": 50},
         {"Name": "Dreadroot", "Value": "Dreadroot", "HarvestInto": "Dreadroot Tuber", "HValue": 5},
         {"Name": "Elder Lagroot", "Value": "Elder Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50},
-        {"Name": "Fractus", "Value": "Fractus", "HarvestInto": "Spine Fruit", "HValue": 0.1},
+        {"Name": "Fractus", "Value": "Fracti", "HarvestInto": "Spine Fruit", "HValue": 0.1},
         {"Name": "Grave Moss", "Value": "Grave Moss", "HarvestInto": "Clump of Gravemoss", "HValue": 0.01},
         {"Name": "Lagroot", "Value": "Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50},
         {"Name": "Lahbloom", "Value": "Lahbloom", "HarvestInto": "Lah Petals", "HValue": 0.01},
-        {"Name": "Luminous Hoarshroom", "Value": "Luminous Hoarshroom", "HarvestInto": "Luminous Hoarshroom", "HValue": 70},
+        {"Name": "Luminous Hoarshroom", "Value": "Luminous Hoarshroom", "HarvestInto": "Hoarshroom", "HValue": 70},
         {"Name": "Noisegrass", "Value": "Noisegrass", "HarvestInto": "Bundle of Noisegrass", "HValue": 50},
         {"Name": "Starapple Tree", "Value": "Starapple Tree", "HarvestInto": "Starapple", "HValue": 0.1},
         {"Name": "Urberry Bush", "Value": "Urberry Bush", "HarvestInto": "Urberry", "HValue": 65},
@@ -22,7 +22,7 @@
         {"Name": "Watervine", "Value": "Watervine", "HarvestInto": "Vinewafer", "HValue": 0.01},
         {"Name": "Witchwood Tree", "Value": "Witchwood Tree", "HarvestInto": "Witchwood Bark", "HValue": 4},
         {"Name": "Yonderbrush", "Value": "Yonderbrush", "HarvestInto": "Yondercane", "HValue": 100},
-        {"Name": "Young Crystalline Root", "Value": "Young Crystalline Root", "HarvestInto": "Crystal of Eve", "HValue": 475},
+        {"Name": "Young Crystalline Root", "Value": "Crystalline Radicle", "HarvestInto": "Crystal of Eve", "HValue": 475},
         {"Name": "Yuckwheat", "Value": "Yuckwheat", "HarvestInto": "Yuckwheat Stem", "HValue": 10}
       ]
     }
