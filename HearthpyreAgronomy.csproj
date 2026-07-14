@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>HearthpyreAgronomy</AssemblyName>
+    <PackageId>HearthpyreAgronomy</PackageId>
+    <Authors>nbstrong</Authors>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <LangVersion>9</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../hearthpyre/Hearthpyre.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(QudManaged)/0Harmony.dll" />
+    <Reference Include="$(QudManaged)/Assembly-CSharp-firstpass.dll" />
+    <Reference Include="$(QudManaged)/Assembly-CSharp.dll" />
+    <Reference Include="$(QudManaged)/Microsoft.CodeAnalysis.CSharp.dll" />
+    <Reference Include="$(QudManaged)/Microsoft.CodeAnalysis.dll" />
+    <Reference Include="$(QudManaged)/Newtonsoft.Json.dll" />
+    <Reference Include="$(QudManaged)/System.Core.dll" />
+    <Reference Include="$(QudManaged)/System.dll" />
+    <Reference Include="$(QudManaged)/UnityEngine.CoreModule.dll" />
+    <Reference Include="$(QudManaged)/UnityEngine.dll" />
+  </ItemGroup>
+</Project>
