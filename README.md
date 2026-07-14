@@ -10,6 +10,7 @@ Hearthpyre Agronomy is a finished extension mod for Caves of Qud that adds a ded
   - the blueprint is placed normally
   - building the plant requires one matching `HarvestInto` item in your inventory
   - the required item is consumed only after the plant object is successfully created
+  - the normal tier-based xyloschemer charge cost is still paid for the build
 - Persistent regrowth based on absolute game time
   - newly built plants start unripe
   - the first harvestable state arrives after the plant's `H Value`, with a minimum of 1 day

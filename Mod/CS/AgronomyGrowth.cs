@@ -9,7 +9,6 @@ namespace XRL.World.Parts
 	{
 		public long GrowthTurns;
 		public long ReadyTurn;
-		public bool LastKnownRipe;
 
 		public override void Write(GameObject Basis, SerializationWriter Writer)
 		{
@@ -17,8 +16,7 @@ namespace XRL.World.Parts
 			var fields = new Dictionary<string, object>
 			{
 				["GrowthTurns"] = GrowthTurns,
-				["ReadyTurn"] = ReadyTurn,
-				["LastKnownRipe"] = LastKnownRipe
+				["ReadyTurn"] = ReadyTurn
 			};
 			Writer.Write(fields);
 		}
@@ -30,7 +28,6 @@ namespace XRL.World.Parts
 			object val;
 			if (fields.TryGetValue("GrowthTurns", out val)) GrowthTurns = Convert.ToInt64(val);
 			if (fields.TryGetValue("ReadyTurn", out val)) ReadyTurn = Convert.ToInt64(val);
-			if (fields.TryGetValue("LastKnownRipe", out val)) LastKnownRipe = Convert.ToBoolean(val);
 		}
 
 		public override bool WantEvent(int ID, int cascade)
@@ -78,7 +75,12 @@ namespace XRL.World.Parts
 		{
 			GrowthTurns = growthTurns;
 			ReadyTurn = readyTurn;
-			LastKnownRipe = false;
+		}
+
+		public void ScheduleFromCurrentTurn(long currentTurn)
+		{
+			if (GrowthTurns <= 0) return;
+			ReadyTurn = currentTurn + GrowthTurns;
 		}
 
 		public void SyncGrowthState(long? currentTurn = null)
@@ -94,26 +96,9 @@ namespace XRL.World.Parts
 			harvestable.RegenTime = string.Empty;
 			harvestable.RegenTimer = int.MaxValue;
 
-			if (harvestable.Ripe)
-			{
-				LastKnownRipe = true;
-				return;
-			}
-
-			if (LastKnownRipe)
-			{
-				ReadyTurn = turn + GrowthTurns;
-				LastKnownRipe = false;
-				harvestable.UpdateRipeStatus(false);
-				harvestable.RegenTime = string.Empty;
-				harvestable.RegenTimer = int.MaxValue;
-				return;
-			}
-
-			if (turn >= ReadyTurn)
+			if (!harvestable.Ripe && turn >= ReadyTurn)
 			{
 				harvestable.UpdateRipeStatus(true);
-				LastKnownRipe = true;
 				harvestable.RegenTime = string.Empty;
 				harvestable.RegenTimer = int.MaxValue;
 			}
