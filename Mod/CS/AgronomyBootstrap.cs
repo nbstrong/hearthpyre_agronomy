@@ -32,18 +32,56 @@ namespace HearthpyreAgronomy
 			AgronomyCatalog.Load();
 			PatchBuild();
 			PatchDescription();
+			PatchRipeStatus();
 		}
 
 		private static void PatchBuild()
 		{
-			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build));
+			var target = AccessTools.Method(
+				typeof(HearthpyreBlueprint),
+				nameof(HearthpyreBlueprint.Build),
+				new[] { typeof(GameObject), typeof(bool) }
+			);
+			if (target == null)
+			{
+				MetricsManager.LogError(
+					"HearthpyreAgronomy could not find HearthpyreBlueprint.Build(GameObject, bool)",
+					new MissingMethodException(typeof(HearthpyreBlueprint).FullName, nameof(HearthpyreBlueprint.Build))
+				);
+				return;
+			}
+
 			Harmony.Patch(target, prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)));
 		}
 
 		private static void PatchDescription()
 		{
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) });
+			if (target == null)
+			{
+				MetricsManager.LogError(
+					"HearthpyreAgronomy could not find HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent)",
+					new MissingMethodException(typeof(HearthpyreBlueprint).FullName, "HandleEvent")
+				);
+				return;
+			}
+
 			Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ShortDescriptionPostfix)));
+		}
+
+		private static void PatchRipeStatus()
+		{
+			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
+			if (target == null)
+			{
+				MetricsManager.LogError(
+					"HearthpyreAgronomy could not find Harvestable.UpdateRipeStatus(bool)",
+					new MissingMethodException(typeof(Harvestable).FullName, nameof(Harvestable.UpdateRipeStatus))
+				);
+				return;
+			}
+
+			Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RipeStatusPostfix)));
 		}
 	}
 
@@ -159,6 +197,15 @@ namespace HearthpyreAgronomy
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
 		}
 
+		public static void RipeStatusPostfix(Harvestable __instance, bool __0)
+		{
+			if (__0 || __instance?.ParentObject == null)
+				return;
+
+			if (__instance.ParentObject.TryGetPart(out AgronomyGrowth growth))
+				growth.Schedule();
+		}
+
 		private static bool BuildAgronomyPlant(HearthpyreBlueprint blueprint, GameObject actor, bool silent, AgronomyCatalog.Entry entry)
 		{
 			var cell = blueprint.ParentObject?.CurrentCell;
@@ -225,10 +272,17 @@ namespace HearthpyreAgronomy
 		{
 			if (!obj.TryGetPart(out Harvestable harvestable)) return;
 
-			var turns = Math.Max(1, days) * Calendar.TurnsPerDay;
-			harvestable.Ripe = false;
-			harvestable.RegenTime = turns + "-" + turns;
-			harvestable.RegenTimer = turns;
+			var growth = new AgronomyGrowth
+			{
+				GrowthTurns = Math.Max(1L, (long)days * Calendar.TurnsPerDay)
+			};
+
+			harvestable.DestroyOnHarvest = false;
+			harvestable.RegenTime = "";
+			harvestable.RegenTimer = int.MaxValue;
+			obj.AddPart(growth);
+			harvestable.UpdateRipeStatus(newRipeStatus: false);
+			growth.Schedule();
 		}
 
 		private static GameObject FindRequiredItem(GameObject actor, string blueprint)
