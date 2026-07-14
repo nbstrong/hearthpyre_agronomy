@@ -24,52 +24,122 @@ namespace HearthpyreAgronomy
 			if (Initialized) return;
 
 			if (!AgronomyCatalog.Load()) return;
-			if (!PatchBuild()) return;
-			if (!PatchGrowth()) return;
-			PatchDescription();
+			if (!CanPatchAll()) return;
+			if (!PatchAll()) return;
 			Initialized = true;
 		}
 
-		private static bool PatchBuild()
+		private static bool CanPatchAll()
 		{
-			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
-			if (target == null)
+			if (AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) }) == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.Build; the signature may have changed.");
 				return false;
 			}
 
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
-			Harmony.Patch(target, prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)));
-			return true;
-		}
-
-		private static bool PatchDescription()
-		{
-			var target = AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) });
-			if (target == null)
-			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent); the signature may have changed.");
-				return false;
-			}
-
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
-			Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ShortDescriptionPostfix)));
-			return true;
-		}
-
-		private static bool PatchGrowth()
-		{
-			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
-			if (target == null)
+			if (AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) }) == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
 				return false;
 			}
 
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
-			Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix)));
+			if (AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) }) == null)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent); the signature may have changed.");
+				return false;
+			}
+
 			return true;
+		}
+
+		private static bool PatchAll()
+		{
+			if (!PatchBuild())
+			{
+				return false;
+			}
+
+			if (!PatchGrowth())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
+				UnpatchBuild();
+				return false;
+			}
+
+			if (!PatchDescription())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent); the signature may have changed.");
+				UnpatchGrowth();
+				UnpatchBuild();
+				return false;
+			}
+
+			return true;
+		}
+
+		private static bool PatchBuild()
+		{
+			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch HearthpyreBlueprint.Build", e);
+				return false;
+			}
+		}
+
+		private static bool PatchGrowth()
+		{
+			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch Harvestable.UpdateRipeStatus(bool)", e);
+				return false;
+			}
+		}
+
+		private static bool PatchDescription()
+		{
+			var target = AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) });
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ShortDescriptionPostfix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent)", e);
+				return false;
+			}
+		}
+
+		private static void UnpatchBuild()
+		{
+			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
+			if (target == null) return;
+			Harmony.Unpatch(target, HarmonyPatchType.Prefix, Harmony.Id);
+		}
+
+		private static void UnpatchGrowth()
+		{
+			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
+			if (target == null) return;
+			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
 	}
 
@@ -361,13 +431,6 @@ namespace HearthpyreAgronomy
 			HoloZap(cell);
 			cell.RemoveObject(blueprint.ParentObject);
 			var obj = cell.Construct(created);
-			if (obj == null)
-			{
-				cell.AddObject(blueprint.ParentObject);
-				created.Destroy();
-				Lattice.Invalidate(cell);
-				return false;
-			}
 
 			required = required.SplitFromStack();
 			required.Destroy(Silent: true);
