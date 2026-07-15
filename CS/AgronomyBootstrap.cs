@@ -138,12 +138,23 @@ namespace HearthpyreAgronomy
 			if (target == null) return;
 			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
+
 	}
 
 	[PlayerMutator]
 	public sealed class AgronomyMutator : IPlayerMutator
 	{
 		public void mutate(GameObject player)
+		{
+			AgronomyBootstrap.Initialize();
+		}
+	}
+
+	[HasCallAfterGameLoaded]
+	public static class AgronomyLoadBootstrap
+	{
+		[CallAfterGameLoaded]
+		public static void AfterGameLoaded()
 		{
 			AgronomyBootstrap.Initialize();
 		}

@@ -34,10 +34,10 @@ Hearthpyre Agronomy is a finished extension mod for Caves of Qud that adds a ded
 
 ## Project Layout
 
-- `Mod/manifest.json` declares the mod metadata and the Hearthpyre dependency.
-- `Mod/Hearthpyre.json` defines the Agronomy catalog data.
-- `Mod/CS/AgronomyBootstrap.cs` hooks the Hearthpyre blueprint build path and validates the catalog.
-- `Mod/CS/AgronomyGrowth.cs` stores regrowth deadlines and reconciles them against global game time.
+- `manifest.json` declares the mod metadata and the Hearthpyre dependency.
+- `Hearthpyre.json` defines the Agronomy catalog data.
+- `CS/AgronomyBootstrap.cs` hooks the Hearthpyre blueprint build path and validates the catalog.
+- `CS/AgronomyGrowth.cs` stores regrowth deadlines and reconciles them against global game time.
 
 ## Notes
 
