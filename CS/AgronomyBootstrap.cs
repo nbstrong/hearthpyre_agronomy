@@ -433,6 +433,8 @@ namespace HearthpyreAgronomy
 			icon.Tile = CrystallineRadicleIconTile;
 			icon.Foreground = CLD_MAG;
 			icon.Background = CLD_BLK;
+			icon.TileForeground = CLD_MAG;
+			icon.TileBackground = CLD_BLK;
 			icon.Detail = CLD_YEL;
 		}
 
