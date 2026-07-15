@@ -369,7 +369,7 @@ namespace HearthpyreAgronomy
 			if (!AgronomyCatalog.TryGet(GetBlueprintName(__instance), out var entry))
 				return;
 
-			E.Postfix.Append("\n{{g|Requires }}").Append(entry.HarvestInto).Append("{{g| to build.}}");
+			E.Postfix.Append("\n{{g|Requires }}").Append(GetRequiredItemPhrase(entry.HarvestInto)).Append("{{g| to build.}}");
 			E.Postfix.Append("\n{{g|Consumes the normal xyloschemer charge cost.}}");
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
 		}
@@ -380,7 +380,7 @@ namespace HearthpyreAgronomy
 			if (__instance?.ParentObject == null) return;
 			if (!__instance.ParentObject.TryGetPart(out AgronomyGrowth growth)) return;
 
-			growth.ScheduleFromCurrentTurn(The.Game?.Turns ?? 0L);
+			growth.ScheduleFromCurrentTime(The.Game?.TimeTicks ?? 0L);
 		}
 
 		private static bool BuildAgronomyPlant(HearthpyreBlueprint blueprint, GameObject actor, bool silent, AgronomyCatalog.Entry entry)
@@ -425,7 +425,7 @@ namespace HearthpyreAgronomy
 				created.Destroy();
 				if (!silent)
 				{
-					actor.Failure("You need " + Grammar.A(entry.HarvestInto) + " to build that.");
+					actor.Failure("You need " + GetRequiredItemPhrase(entry.HarvestInto) + " to build that.");
 				}
 
 				return false;
@@ -472,11 +472,20 @@ namespace HearthpyreAgronomy
 			harvestable.RegenTime = string.Empty;
 			harvestable.RegenTimer = int.MaxValue;
 
+			var currentTime = The.Game?.TimeTicks ?? 0L;
 			var growth = obj.IncludePart<AgronomyGrowth>();
-			growth.Configure(entry.GrowthTurns, The.Game?.Turns ?? 0L);
+			growth.Configure(entry.GrowthTurns, currentTime);
 			harvestable.UpdateRipeStatus(false);
-			growth.ScheduleFromCurrentTurn(The.Game?.Turns ?? 0L);
-			growth.SyncGrowthState();
+			growth.ScheduleFromCurrentTime(currentTime);
+			growth.SyncGrowthState(currentTime);
+		}
+
+		private static string GetRequiredItemPhrase(string blueprint)
+		{
+			var sample = GameObjectFactory.Factory.CreateSampleObject(blueprint);
+			if (sample == null) return Grammar.A(blueprint);
+
+			return sample.a + sample.DisplayNameOnlyDirect;
 		}
 
 		private static GameObject FindRequiredItem(GameObject actor, string blueprint)

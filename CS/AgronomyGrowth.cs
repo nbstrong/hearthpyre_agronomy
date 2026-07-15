@@ -79,26 +79,26 @@ namespace XRL.World.Parts
 			ReadyTurn = readyTurn;
 		}
 
-		public void ScheduleFromCurrentTurn(long currentTurn)
+		public void ScheduleFromCurrentTime(long currentTime)
 		{
 			if (GrowthTurns <= 0) return;
-			ReadyTurn = currentTurn + GrowthTurns;
+			ReadyTurn = currentTime + GrowthTurns;
 		}
 
-		public void SyncGrowthState(long? currentTurn = null)
+		public void SyncGrowthState(long? currentTime = null)
 		{
 			if (GrowthTurns <= 0) return;
 			if (!ParentObject.TryGetPart(out Harvestable harvestable)) return;
 
 			var game = The.Game;
-			if (game == null && !currentTurn.HasValue) return;
+			if (game == null && !currentTime.HasValue) return;
 
-			var turn = currentTurn ?? game.Turns;
+			var time = currentTime ?? game.TimeTicks;
 			harvestable.DestroyOnHarvest = false;
 			harvestable.RegenTime = string.Empty;
 			harvestable.RegenTimer = int.MaxValue;
 
-			if (!harvestable.Ripe && turn >= ReadyTurn)
+			if (!harvestable.Ripe && time >= ReadyTurn)
 			{
 				harvestable.UpdateRipeStatus(true);
 				harvestable.RegenTime = string.Empty;
