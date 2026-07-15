@@ -89,7 +89,11 @@ namespace HearthpyreAgronomy
 
 			try
 			{
-				Harmony.Patch(target, prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)));
+				Harmony.Patch(
+					target,
+					prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)),
+					postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPostfix))
+				);
 				return true;
 			}
 			catch (Exception e)
@@ -400,6 +404,13 @@ namespace HearthpyreAgronomy
 		private const string CrystallineRadicleBlueprint = "Crystalline Radicle";
 		private const string CrystallineRadicleIconTile = "Tiles2/Roots/base_ew.png";
 
+		private sealed class BuildState
+		{
+			public AgronomyCatalog.Entry Entry;
+			public GameObject Required;
+			public Cell Cell;
+		}
+
 		public static void RepairCrystallineRadicleIconPostfix()
 		{
 			RepairCrystallineRadicleIcon();
@@ -443,7 +454,7 @@ namespace HearthpyreAgronomy
 			return blueprint?.Blueprint ?? blueprint?.ParentObject?.Blueprint;
 		}
 
-		public static bool BuildPrefix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result)
+		public static bool BuildPrefix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, ref BuildState __state)
 		{
 			var blueprint = GetBlueprintName(__instance);
 			if (!AgronomyCatalog.TryGetDeclared(blueprint, out var declared))
@@ -460,8 +471,48 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
-			__result = BuildAgronomyPlant(__instance, Actor, Silent, declared);
-			return false;
+			var cell = __instance?.ParentObject?.CurrentCell;
+			if (cell == null || Actor == null || Actor.CurrentCell == null || cell == Actor.CurrentCell)
+				return true;
+
+			var required = FindRequiredItem(Actor, declared.HarvestInto);
+			if (required == null)
+			{
+				if (!Silent)
+				{
+					Actor.Failure("You need " + GetRequiredItemPhrase(declared.HarvestInto) + " to build that.");
+				}
+
+				__result = false;
+				return false;
+			}
+
+			__state = new BuildState
+			{
+				Entry = declared,
+				Required = required,
+				Cell = cell
+			};
+
+			return true;
+		}
+
+		public static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
+		{
+			if (!__result || __state == null || __state.Entry == null)
+				return;
+
+			var cell = __state.Cell ?? __instance?.ParentObject?.CurrentCell;
+			if (cell == null)
+				return;
+
+			var obj = cell.Objects.FirstOrDefault(x => string.Equals(x?.Blueprint, __state.Entry.Blueprint, StringComparison.Ordinal));
+			if (obj == null)
+				return;
+
+			__state.Required?.SplitFromStack().Destroy(Silent: true);
+
+			ApplyGrowth(obj, __state.Entry);
 		}
 
 		public static void ShortDescriptionPostfix(HearthpyreBlueprint __instance, GetShortDescriptionEvent E)
@@ -481,87 +532,6 @@ namespace HearthpyreAgronomy
 			if (!__instance.ParentObject.TryGetPart(out AgronomyGrowth growth)) return;
 
 			growth.ScheduleFromCurrentTime(The.Game?.TimeTicks ?? 0L);
-		}
-
-		private static bool BuildAgronomyPlant(HearthpyreBlueprint blueprint, GameObject actor, bool silent, AgronomyCatalog.Entry entry)
-		{
-			var cell = blueprint.ParentObject?.CurrentCell;
-			if (cell == null || actor == null || actor.CurrentCell == null) return false;
-			if (cell == actor.CurrentCell) return false;
-
-			var xyloschemer = actor.GetItemWithBlueprint(OBJ_SCMR);
-			if (xyloschemer == null)
-			{
-				if (!silent)
-				{
-					actor.Failure(CheckEpistemicStatus(OBJ_SCMR)
-						? "You can't build that without a xyloschemer."
-						: "You don't have anything to build that with.");
-				}
-
-				return false;
-			}
-
-			if (!cell.IsClear())
-			{
-				if (!silent)
-				{
-					actor.Failure("There isn't enough room to build that.");
-				}
-
-				return false;
-			}
-
-			var created = GameObjectFactory.Factory.CreateObject(entry.Blueprint, blueprint.Brand);
-			if (created == null || !string.Equals(created.Blueprint, entry.Blueprint, StringComparison.Ordinal))
-			{
-				created?.Destroy();
-				return false;
-			}
-
-			var required = FindRequiredItem(actor, entry.HarvestInto);
-			if (required == null)
-			{
-				created.Destroy();
-				if (!silent)
-				{
-					actor.Failure("You need " + GetRequiredItemPhrase(entry.HarvestInto) + " to build that.");
-				}
-
-				return false;
-			}
-
-			var part = xyloschemer.GetPart<HearthpyreXyloschemer>();
-			if (part == null || !part.UseCharge(ChargeUse: blueprint.Cost, Silent: silent))
-			{
-				created.Destroy();
-				return false;
-			}
-
-			HoloZap(cell);
-			cell.RemoveObject(blueprint.ParentObject);
-			var obj = cell.Construct(created);
-
-			required = required.SplitFromStack();
-			required.Destroy(Silent: true);
-
-			blueprint.ParentObject.Destroy();
-			ApplyGrowth(obj, entry);
-
-			if (!silent)
-			{
-				actor.Physics.DidXToYWithZ(
-					"zap",
-					obj,
-					"into existence with",
-					xyloschemer,
-					IndefiniteDirectObject: true,
-					IndirectObjectPossessedBy: actor
-				);
-			}
-
-			Lattice.Invalidate(cell);
-			return true;
 		}
 
 		private static void ApplyGrowth(GameObject obj, AgronomyCatalog.Entry entry)
