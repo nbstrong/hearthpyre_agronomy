@@ -159,6 +159,7 @@ namespace HearthpyreAgronomy
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
 			if (target == null) return;
 			Harmony.Unpatch(target, HarmonyPatchType.Prefix, Harmony.Id);
+			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
 
 	}
