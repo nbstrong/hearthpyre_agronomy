@@ -36,10 +36,6 @@ namespace HearthpyreAgronomy
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch Notitia.Init; the icon repair fallback may not run on reload.");
 			}
-			if (!PatchBlueprintPicker())
-			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch BlueprintPicker.Enter; the icon repair fallback may not run when the menu opens.");
-			}
 			if (!PatchDescription())
 			{
 				MetricsManager.LogError("HearthpyreAgronomy initialized without the tooltip description patch.");
@@ -103,24 +99,6 @@ namespace HearthpyreAgronomy
 		private static bool PatchNotitia()
 		{
 			var target = AccessTools.Method(typeof(Notitia), nameof(Notitia.Init), Type.EmptyTypes);
-			if (target == null) return false;
-
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
-
-			try
-			{
-				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RepairCrystallineRadicleIconPostfix)));
-				return true;
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
-		private static bool PatchBlueprintPicker()
-		{
-			var target = AccessTools.Method(typeof(Hearthpyre.UI.BlueprintPicker), nameof(Hearthpyre.UI.BlueprintPicker.Enter), Type.EmptyTypes);
 			if (target == null) return false;
 
 			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
@@ -416,19 +394,17 @@ namespace HearthpyreAgronomy
 			if (Notitia.Categories == null)
 				return;
 
-			foreach (var category in Notitia.Categories.Values)
-			{
-				if (category?.AllBlueprints == null)
-					continue;
+			if (!Notitia.Categories.TryGetValue("Agronomy", out var category))
+				return;
 
-				foreach (var blueprint in category.AllBlueprints)
-				{
-					if (!string.Equals(blueprint?.Value?.Name, CrystallineRadicleBlueprint, StringComparison.Ordinal))
-						continue;
+			if (category?.AllBlueprints == null)
+				return;
 
-					ApplyCrystallineRadicleIcon(blueprint.Icon);
-				}
-			}
+			var blueprint = category.AllBlueprints.FirstOrDefault(x => string.Equals(x?.Value?.Name, CrystallineRadicleBlueprint, StringComparison.Ordinal));
+			if (blueprint == null)
+				return;
+
+			ApplyCrystallineRadicleIcon(blueprint.Icon);
 		}
 
 		private static void ApplyCrystallineRadicleIcon(ConsoleChar icon)
