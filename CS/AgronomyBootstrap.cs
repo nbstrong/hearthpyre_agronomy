@@ -254,7 +254,8 @@ namespace HearthpyreAgronomy
 			var loadedBlueprints = new Dictionary<string, Entry>(StringComparer.Ordinal);
 			var foundFile = false;
 			var foundCatalog = false;
-			var parseFailed = false;
+			var loadFailed = false;
+			var validEntryCount = 0;
 
 			ModManager.ForEachFile("Hearthpyre.json", (file, mod) =>
 			{
@@ -268,8 +269,8 @@ namespace HearthpyreAgronomy
 					var data = JSON.Parse(File.ReadAllText(file)) as JSONClass;
 					if (data == null)
 					{
-						parseFailed = true;
-						MetricsManager.LogError("HearthpyreAgronomy failed to parse " + file + " because it is not a JSON object.");
+						loadFailed = true;
+						MetricsManager.LogError("HearthpyreAgronomy failed to load " + file + " because it is not a JSON object.");
 						return;
 					}
 
@@ -307,12 +308,13 @@ namespace HearthpyreAgronomy
 							continue;
 						}
 
+						validEntryCount++;
 						loadedBlueprints[entry.Blueprint] = entry;
 					}
 				}
 				catch (Exception e)
 				{
-					parseFailed = true;
+					loadFailed = true;
 					MetricsManager.LogError("HearthpyreAgronomy failed to load Hearthpyre.json", e);
 				}
 			});
@@ -323,9 +325,9 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
-			if (parseFailed)
+			if (loadFailed)
 			{
-				MetricsManager.LogError("HearthpyreAgronomy did not finish loading because at least one Hearthpyre.json file could not be parsed.");
+				MetricsManager.LogError("HearthpyreAgronomy did not finish loading because at least one Hearthpyre.json file could not be loaded.");
 				return false;
 			}
 
@@ -335,7 +337,7 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
-			if (loadedBlueprints.Count == 0)
+			if (validEntryCount == 0)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy found Agronomy catalog data, but no valid entries could be loaded.");
 				return false;
