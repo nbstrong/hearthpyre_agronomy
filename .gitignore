@@ -1,2 +1,5 @@
 AGENTS.md
+bin/
+.vs/
+*.user
 obj/
