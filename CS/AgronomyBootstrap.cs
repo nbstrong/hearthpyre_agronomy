@@ -66,6 +66,11 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			if (!PatchPreview())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.SetDesign(Notitia.Blueprint); the signature may have changed.");
+			}
+
 			return true;
 		}
 
@@ -99,6 +104,28 @@ namespace HearthpyreAgronomy
 			catch (Exception e)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy failed to patch Harvestable.UpdateRipeStatus(bool)", e);
+				return false;
+			}
+		}
+
+		private static bool PatchPreview()
+		{
+			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.SetDesign), new[] { typeof(Notitia.Blueprint) });
+			if (target == null)
+			{
+				return false;
+			}
+
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.SetDesignPostfix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch HearthpyreBlueprint.SetDesign(Notitia.Blueprint)", e);
 				return false;
 			}
 		}
@@ -374,6 +401,24 @@ namespace HearthpyreAgronomy
 			E.Postfix.Append("\n{{g|Requires }}").Append(GetRequiredItemPhrase(entry.HarvestInto)).Append("{{g| to build.}}");
 			E.Postfix.Append("\n{{g|Consumes the normal xyloschemer charge cost.}}");
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
+		}
+
+		public static void SetDesignPostfix(HearthpyreBlueprint __instance, Notitia.Blueprint design)
+		{
+			var blueprintName = design?.Value?.Name;
+
+			if (blueprintName != "Crystalline Radicle")
+				return;
+
+			var render = __instance?.ParentObject?.Render;
+			if (render == null)
+				return;
+
+			render.Tile = null;
+			render.RenderString = "197";
+			render.ColorString = "&m";
+			render.TileColor = "&m";
+			render.DetailColor = "y";
 		}
 
 		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool newRipeStatus)
