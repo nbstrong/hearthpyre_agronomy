@@ -26,66 +26,40 @@ namespace HearthpyreAgronomy
 			if (Initialized) return;
 
 			if (!AgronomyCatalog.Load()) return;
-			if (!CanPatchAll()) return;
-			if (!PatchAll()) return;
-			Initialized = true;
-
-			AgronomyPatches.RepairCrystallineRadicleIcon();
-
-			if (!PatchDescription())
-			{
-				MetricsManager.LogError("HearthpyreAgronomy initialized without the tooltip description patch.");
-			}
-		}
-
-		private static bool CanPatchAll()
-		{
-			if (AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) }) == null)
-			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.Build; the signature may have changed.");
-				return false;
-			}
-
-			if (AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) }) == null)
-			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
-				return false;
-			}
-
-			return true;
-		}
-
-		private static bool PatchAll()
-		{
-			if (!PatchBuild())
-			{
-				return false;
-			}
-
+			if (!PatchBuild()) return;
 			if (!PatchGrowth())
 			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
 				UnpatchBuild();
-				return false;
+				return;
 			}
-
 			if (!PatchNotitia())
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch Notitia.Init; the icon repair fallback may not run on reload.");
 			}
-
 			if (!PatchBlueprintPicker())
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch BlueprintPicker.Enter; the icon repair fallback may not run when the menu opens.");
 			}
+			if (!PatchDescription())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy initialized without the tooltip description patch.");
+			}
 
-			return true;
+			Initialized = true;
+
+			AgronomyPatches.RepairCrystallineRadicleIcon();
 		}
 
 		private static bool PatchBuild()
 		{
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+			if (target == null)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch HearthpyreBlueprint.Build; the signature may have changed.");
+				return false;
+			}
+
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
 
 			try
 			{
@@ -106,7 +80,13 @@ namespace HearthpyreAgronomy
 		private static bool PatchGrowth()
 		{
 			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+			if (target == null)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch Harvestable.UpdateRipeStatus(bool); the signature may have changed.");
+				return false;
+			}
+
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
 
 			try
 			{
@@ -123,21 +103,17 @@ namespace HearthpyreAgronomy
 		private static bool PatchNotitia()
 		{
 			var target = AccessTools.Method(typeof(Notitia), nameof(Notitia.Init), Type.EmptyTypes);
-			if (target == null)
-			{
-				return false;
-			}
+			if (target == null) return false;
 
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
 
 			try
 			{
 				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RepairCrystallineRadicleIconPostfix)));
 				return true;
 			}
-			catch (Exception e)
+			catch
 			{
-				MetricsManager.LogError("HearthpyreAgronomy failed to patch Notitia.Init", e);
 				return false;
 			}
 		}
@@ -145,21 +121,17 @@ namespace HearthpyreAgronomy
 		private static bool PatchBlueprintPicker()
 		{
 			var target = AccessTools.Method(typeof(Hearthpyre.UI.BlueprintPicker), nameof(Hearthpyre.UI.BlueprintPicker.Enter), Type.EmptyTypes);
-			if (target == null)
-			{
-				return false;
-			}
+			if (target == null) return false;
 
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
 
 			try
 			{
 				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RepairCrystallineRadicleIconPostfix)));
 				return true;
 			}
-			catch (Exception e)
+			catch
 			{
-				MetricsManager.LogError("HearthpyreAgronomy failed to patch BlueprintPicker.Enter", e);
 				return false;
 			}
 		}
@@ -167,21 +139,17 @@ namespace HearthpyreAgronomy
 		private static bool PatchDescription()
 		{
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), "HandleEvent", new[] { typeof(GetShortDescriptionEvent) });
-			if (target == null)
-			{
-				return false;
-			}
+			if (target == null) return false;
 
-			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
 
 			try
 			{
 				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ShortDescriptionPostfix)));
 				return true;
 			}
-			catch (Exception e)
+			catch
 			{
-				MetricsManager.LogError("HearthpyreAgronomy failed to patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent)", e);
 				return false;
 			}
 		}
@@ -191,13 +159,6 @@ namespace HearthpyreAgronomy
 			var target = AccessTools.Method(typeof(HearthpyreBlueprint), nameof(HearthpyreBlueprint.Build), new[] { typeof(GameObject), typeof(bool) });
 			if (target == null) return;
 			Harmony.Unpatch(target, HarmonyPatchType.Prefix, Harmony.Id);
-		}
-
-		private static void UnpatchGrowth()
-		{
-			var target = AccessTools.Method(typeof(Harvestable), nameof(Harvestable.UpdateRipeStatus), new[] { typeof(bool) });
-			if (target == null) return;
-			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
 
 	}
