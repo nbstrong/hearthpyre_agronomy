@@ -404,7 +404,7 @@ namespace HearthpyreAgronomy
 		private const string CrystallineRadicleBlueprint = "Crystalline Radicle";
 		private const string CrystallineRadicleIconTile = "Tiles2/Roots/base_ew.png";
 
-		private sealed class BuildState
+		internal sealed class BuildState
 		{
 			public AgronomyCatalog.Entry Entry;
 			public GameObject Required;
@@ -455,7 +455,7 @@ namespace HearthpyreAgronomy
 			return blueprint?.Blueprint ?? blueprint?.ParentObject?.Blueprint;
 		}
 
-		private static bool BuildPrefix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, ref BuildState __state)
+		internal static bool BuildPrefix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, ref BuildState __state)
 		{
 			var blueprint = GetBlueprintName(__instance);
 			if (!AgronomyCatalog.TryGetDeclared(blueprint, out var declared))
@@ -499,7 +499,7 @@ namespace HearthpyreAgronomy
 			return true;
 		}
 
-		private static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
+		internal static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
 		{
 			if (!__result || __state == null || __state.Entry == null)
 				return;
@@ -513,7 +513,6 @@ namespace HearthpyreAgronomy
 			if (obj == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not identify the plant created by HearthpyreBlueprint.Build for " + __state.Entry.Blueprint + ".");
-				__result = false;
 				return;
 			}
 
