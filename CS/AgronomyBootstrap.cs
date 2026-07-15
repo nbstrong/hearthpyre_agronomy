@@ -557,10 +557,9 @@ namespace HearthpyreAgronomy
 
 			var currentTime = The.Game?.TimeTicks ?? 0L;
 			var growth = obj.IncludePart<AgronomyGrowth>();
-			growth.Configure(entry.GrowthTurns, currentTime);
+			growth.Configure(entry.GrowthTurns);
 			harvestable.UpdateRipeStatus(false);
-			growth.ScheduleFromCurrentTime(currentTime);
-			growth.SyncGrowthState(currentTime);
+			growth.ReconcileGrowthState(currentTime);
 		}
 
 		private static void ApplyPlayerBuiltVisibility(GameObject obj, AgronomyCatalog.Entry entry)

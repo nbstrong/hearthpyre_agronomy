@@ -44,25 +44,25 @@ namespace XRL.World.Parts
 
 		public override bool HandleEvent(ObjectCreatedEvent E)
 		{
-			SyncGrowthState();
+			ReconcileGrowthState();
 			return base.HandleEvent(E);
 		}
 
 		public override bool HandleEvent(AfterGameLoadedEvent E)
 		{
-			SyncGrowthState();
+			ReconcileGrowthState();
 			return base.HandleEvent(E);
 		}
 
 		public override bool HandleEvent(ZoneActivatedEvent E)
 		{
-			SyncGrowthState();
+			ReconcileGrowthState();
 			return base.HandleEvent(E);
 		}
 
 		public override bool HandleEvent(ZoneThawedEvent E)
 		{
-			SyncGrowthState();
+			ReconcileGrowthState();
 			return base.HandleEvent(E);
 		}
 
@@ -70,13 +70,12 @@ namespace XRL.World.Parts
 
 		public override void TurnTick(long TimeTick, int Amount)
 		{
-			SyncGrowthState(TimeTick);
+			CheckGrowthState(TimeTick);
 		}
 
-		public void Configure(long growthTurns, long readyTurn)
+		public void Configure(long growthTurns)
 		{
 			GrowthTurns = growthTurns;
-			ReadyTurn = readyTurn;
 		}
 
 		public void ScheduleFromCurrentTime(long currentTime)
@@ -85,7 +84,7 @@ namespace XRL.World.Parts
 			ReadyTurn = currentTime + GrowthTurns;
 		}
 
-		public void SyncGrowthState(long? currentTime = null)
+		public void ReconcileGrowthState(long? currentTime = null)
 		{
 			if (GrowthTurns <= 0) return;
 			if (!ParentObject.TryGetPart(out Harvestable harvestable)) return;
@@ -93,16 +92,30 @@ namespace XRL.World.Parts
 			var game = The.Game;
 			if (game == null && !currentTime.HasValue) return;
 
-			var time = currentTime ?? game.TimeTicks;
+			ApplyInvariantGrowthState(harvestable);
+			CheckGrowthState(currentTime ?? game.TimeTicks, harvestable);
+		}
+
+		public void CheckGrowthState(long currentTime)
+		{
+			if (GrowthTurns <= 0) return;
+			if (!ParentObject.TryGetPart(out Harvestable harvestable)) return;
+
+			CheckGrowthState(currentTime, harvestable);
+		}
+
+		private void ApplyInvariantGrowthState(Harvestable harvestable)
+		{
 			harvestable.DestroyOnHarvest = false;
 			harvestable.RegenTime = string.Empty;
 			harvestable.RegenTimer = int.MaxValue;
+		}
 
-			if (!harvestable.Ripe && time >= ReadyTurn)
+		private void CheckGrowthState(long currentTime, Harvestable harvestable)
+		{
+			if (!harvestable.Ripe && currentTime >= ReadyTurn)
 			{
 				harvestable.UpdateRipeStatus(true);
-				harvestable.RegenTime = string.Empty;
-				harvestable.RegenTimer = int.MaxValue;
 			}
 		}
 	}
