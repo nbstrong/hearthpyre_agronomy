@@ -73,10 +73,9 @@ namespace XRL.World.Parts
 			CheckGrowthState(TimeTick);
 		}
 
-		public void Configure(long growthTurns, long readyTurn)
+		public void Configure(long growthTurns)
 		{
 			GrowthTurns = growthTurns;
-			ReadyTurn = readyTurn;
 		}
 
 		public void ScheduleFromCurrentTime(long currentTime)

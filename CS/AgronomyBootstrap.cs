@@ -557,7 +557,7 @@ namespace HearthpyreAgronomy
 
 			var currentTime = The.Game?.TimeTicks ?? 0L;
 			var growth = obj.IncludePart<AgronomyGrowth>();
-			growth.Configure(entry.GrowthTurns, currentTime + entry.GrowthTurns);
+			growth.Configure(entry.GrowthTurns);
 			harvestable.UpdateRipeStatus(false);
 			growth.ReconcileGrowthState(currentTime);
 		}
