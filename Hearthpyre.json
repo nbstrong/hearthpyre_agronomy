@@ -9,7 +9,6 @@
         {"Name": "Banana Tree", "Value": "Banana Tree", "HarvestInto": "Banana", "HValue": 8},
         {"Name": "Bop Sponge", "Value": "Bop Sponge", "HarvestInto": "Bop Cheek", "HValue": 50},
         {"Name": "Dreadroot", "Value": "Dreadroot", "HarvestInto": "Dreadroot Tuber", "HValue": 5},
-        {"Name": "Elder Lagroot", "Value": "Elder Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50},
         {"Name": "Fractus", "Value": "Fracti", "HarvestInto": "Spine Fruit", "HValue": 0.1},
         {"Name": "Grave Moss", "Value": "Grave Moss", "HarvestInto": "Clump of Grave Moss", "HValue": 0.01},
         {"Name": "Lagroot", "Value": "Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50},
