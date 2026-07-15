@@ -228,6 +228,7 @@ namespace HearthpyreAgronomy
 			public string Name;
 			public string Blueprint;
 			public string HarvestInto;
+			public string RequiredItemPhrase;
 			public bool AlwaysVisible;
 			public double HValue;
 			public bool Valid;
@@ -238,17 +239,7 @@ namespace HearthpyreAgronomy
 		}
 
 		private static readonly Dictionary<string, Entry> ByBlueprint = new Dictionary<string, Entry>(StringComparer.Ordinal);
-		private static readonly Dictionary<string, Entry> DeclaredBlueprints = new Dictionary<string, Entry>(StringComparer.Ordinal);
-		private static readonly Dictionary<string, string> NormalizedBlueprints = new Dictionary<string, string>(StringComparer.Ordinal);
 		private static bool Loaded;
-
-		private static string Normalize(string value)
-		{
-			if (string.IsNullOrEmpty(value)) return value;
-
-			var chars = value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray();
-			return new string(chars);
-		}
 
 		public static bool Load()
 		{
@@ -260,17 +251,32 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			var loadedBlueprints = new Dictionary<string, Entry>(StringComparer.Ordinal);
+			var foundFile = false;
+			var foundCatalog = false;
+			var loadFailed = false;
+			var validEntryCount = 0;
+
 			ModManager.ForEachFile("Hearthpyre.json", (file, mod) =>
 			{
 #pragma warning disable 0612
 				if (!mod.IsApproved) return;
 #pragma warning restore 0612
 
+				foundFile = true;
 				try
 				{
 					var data = JSON.Parse(File.ReadAllText(file)) as JSONClass;
+					if (data == null)
+					{
+						loadFailed = true;
+						MetricsManager.LogError("HearthpyreAgronomy failed to load " + file + " because it is not a JSON object.");
+						return;
+					}
+
 					var items = data?["BLUEPRINTS"]?["Agronomy"]?["Items"]?.AsArray;
 					if (items == null) return;
+					foundCatalog = true;
 
 					foreach (JSONNode node in items)
 					{
@@ -290,39 +296,58 @@ namespace HearthpyreAgronomy
 							HValue = node["HValue"]?.AsDouble ?? double.NaN
 						};
 
-						if (DeclaredBlueprints.ContainsKey(entry.Blueprint))
+						if (loadedBlueprints.ContainsKey(entry.Blueprint))
 						{
 							MetricsManager.LogError("HearthpyreAgronomy skipped duplicate Agronomy blueprint " + entry.Blueprint + " from " + file + ".");
 							continue;
 						}
 
-						DeclaredBlueprints[entry.Blueprint] = entry;
 						if (!ValidateEntry(file, entry))
 						{
+							loadedBlueprints[entry.Blueprint] = entry;
 							continue;
 						}
 
-						ByBlueprint[entry.Blueprint] = entry;
-
-						var normalized = Normalize(entry.Blueprint);
-						if (!string.IsNullOrEmpty(normalized))
-						{
-							if (NormalizedBlueprints.TryGetValue(normalized, out var existing) && !string.Equals(existing, entry.Blueprint, StringComparison.Ordinal))
-							{
-								MetricsManager.LogError("HearthpyreAgronomy detected a normalized blueprint collision between " + existing + " and " + entry.Blueprint + " in " + file + ". The normalized alias will keep pointing at " + existing + ".");
-							}
-							else
-							{
-								NormalizedBlueprints[normalized] = entry.Blueprint;
-							}
-						}
+						validEntryCount++;
+						loadedBlueprints[entry.Blueprint] = entry;
 					}
 				}
 				catch (Exception e)
 				{
+					loadFailed = true;
 					MetricsManager.LogError("HearthpyreAgronomy failed to load Hearthpyre.json", e);
 				}
 			});
+
+			if (!foundFile)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not find any approved Hearthpyre.json files.");
+				return false;
+			}
+
+			if (loadFailed)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy did not finish loading because at least one Hearthpyre.json file could not be loaded.");
+				return false;
+			}
+
+			if (!foundCatalog)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not find any Agronomy catalog data in Hearthpyre.json.");
+				return false;
+			}
+
+			if (validEntryCount == 0)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy found Agronomy catalog data, but no valid entries could be loaded.");
+				return false;
+			}
+
+			ByBlueprint.Clear();
+			foreach (var pair in loadedBlueprints)
+			{
+				ByBlueprint[pair.Key] = pair.Value;
+			}
 
 			Loaded = true;
 			return true;
@@ -330,10 +355,7 @@ namespace HearthpyreAgronomy
 
 		public static bool TryGet(string blueprint, out Entry entry)
 		{
-			if (!string.IsNullOrEmpty(blueprint) && ByBlueprint.TryGetValue(blueprint, out entry))
-				return true;
-
-			if (!string.IsNullOrEmpty(blueprint) && NormalizedBlueprints.TryGetValue(Normalize(blueprint), out var exact) && ByBlueprint.TryGetValue(exact, out entry))
+			if (!string.IsNullOrEmpty(blueprint) && ByBlueprint.TryGetValue(blueprint, out entry) && entry.Valid)
 				return true;
 
 			entry = null;
@@ -342,7 +364,7 @@ namespace HearthpyreAgronomy
 
 		public static bool TryGetDeclared(string blueprint, out Entry entry)
 		{
-			if (!string.IsNullOrEmpty(blueprint) && DeclaredBlueprints.TryGetValue(blueprint, out entry))
+			if (!string.IsNullOrEmpty(blueprint) && ByBlueprint.TryGetValue(blueprint, out entry))
 				return true;
 
 			entry = null;
@@ -385,6 +407,8 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			entry.RequiredItemPhrase = ResolveRequiredItemPhrase(entry.HarvestInto);
+
 			if (plantBlueprint.GetPart("Harvestable") == null)
 			{
 				entry.Valid = false;
@@ -396,6 +420,14 @@ namespace HearthpyreAgronomy
 			entry.Valid = true;
 			entry.ValidationError = null;
 			return true;
+		}
+
+		private static string ResolveRequiredItemPhrase(string blueprint)
+		{
+			var sample = GameObjectFactory.Factory.CreateSampleObject(blueprint);
+			if (sample == null) return Grammar.A(blueprint);
+
+			return sample.a + sample.DisplayNameOnlyDirect;
 		}
 	}
 
@@ -481,7 +513,7 @@ namespace HearthpyreAgronomy
 			{
 				if (!Silent)
 				{
-					Actor.Failure("You need " + GetRequiredItemPhrase(declared.HarvestInto) + " to build that.");
+					Actor.Failure("You need " + GetRequiredItemPhrase(declared) + " to build that.");
 				}
 
 				__result = false;
@@ -531,7 +563,7 @@ namespace HearthpyreAgronomy
 			if (!AgronomyCatalog.TryGet(GetBlueprintName(__instance), out var entry))
 				return;
 
-			E.Postfix.Append("\n{{g|Requires }}").Append(GetRequiredItemPhrase(entry.HarvestInto)).Append("{{g| to build.}}");
+			E.Postfix.Append("\n{{g|Requires }}").Append(GetRequiredItemPhrase(entry)).Append("{{g| to build.}}");
 			E.Postfix.Append("\n{{g|Consumes the normal xyloschemer charge cost.}}");
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
 		}
@@ -577,32 +609,22 @@ namespace HearthpyreAgronomy
 				obj.Render.Visible = true;
 		}
 
-		private static string GetRequiredItemPhrase(string blueprint)
+		private static string GetRequiredItemPhrase(AgronomyCatalog.Entry entry)
 		{
-			var sample = GameObjectFactory.Factory.CreateSampleObject(blueprint);
-			if (sample == null) return Grammar.A(blueprint);
+			if (!string.IsNullOrEmpty(entry?.RequiredItemPhrase))
+				return entry.RequiredItemPhrase;
 
-			return sample.a + sample.DisplayNameOnlyDirect;
+			return Grammar.A(entry?.HarvestInto);
 		}
 
 		private static GameObject FindRequiredItem(GameObject actor, string blueprint)
 		{
-			var normalized = Normalize(blueprint);
 			foreach (var item in actor.YieldItems())
 			{
 				if (item.Blueprint == blueprint) return item;
-				if (Normalize(item.Blueprint) == normalized) return item;
 			}
 
 			return null;
-		}
-
-		private static string Normalize(string value)
-		{
-			if (string.IsNullOrEmpty(value)) return value;
-
-			var chars = value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray();
-			return new string(chars);
 		}
 	}
 }
