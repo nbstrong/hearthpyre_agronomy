@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using HarmonyLib;
 using Hearthpyre;
+using Hearthpyre.Realm;
 using SimpleJSON;
 using XRL;
 using XRL.Language;
@@ -188,7 +189,9 @@ namespace HearthpyreAgronomy
 
 			ModManager.ForEachFile("Hearthpyre.json", (file, mod) =>
 			{
+#pragma warning disable 0612
 				if (!mod.IsApproved) return;
+#pragma warning restore 0612
 
 				try
 				{
