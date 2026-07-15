@@ -6,6 +6,7 @@ using HarmonyLib;
 using Hearthpyre;
 using Hearthpyre.Realm;
 using SimpleJSON;
+using ConsoleLib.Console;
 using XRL;
 using XRL.Language;
 using XRL.Rules;
@@ -28,6 +29,8 @@ namespace HearthpyreAgronomy
 			if (!CanPatchAll()) return;
 			if (!PatchAll()) return;
 			Initialized = true;
+
+			AgronomyPatches.RepairCrystallineRadicleIcon();
 
 			if (!PatchDescription())
 			{
@@ -66,6 +69,16 @@ namespace HearthpyreAgronomy
 				return false;
 			}
 
+			if (!PatchNotitia())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch Notitia.Init; the icon repair fallback may not run on reload.");
+			}
+
+			if (!PatchBlueprintPicker())
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch BlueprintPicker.Enter; the icon repair fallback may not run when the menu opens.");
+			}
+
 			return true;
 		}
 
@@ -99,6 +112,50 @@ namespace HearthpyreAgronomy
 			catch (Exception e)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy failed to patch Harvestable.UpdateRipeStatus(bool)", e);
+				return false;
+			}
+		}
+
+		private static bool PatchNotitia()
+		{
+			var target = AccessTools.Method(typeof(Notitia), nameof(Notitia.Init), Type.EmptyTypes);
+			if (target == null)
+			{
+				return false;
+			}
+
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RepairCrystallineRadicleIconPostfix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch Notitia.Init", e);
+				return false;
+			}
+		}
+
+		private static bool PatchBlueprintPicker()
+		{
+			var target = AccessTools.Method(typeof(Hearthpyre.UI.BlueprintPicker), nameof(Hearthpyre.UI.BlueprintPicker.Enter), Type.EmptyTypes);
+			if (target == null)
+			{
+				return false;
+			}
+
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains("HearthpyreAgronomy") == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RepairCrystallineRadicleIconPostfix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch BlueprintPicker.Enter", e);
 				return false;
 			}
 		}
@@ -340,6 +397,45 @@ namespace HearthpyreAgronomy
 
 	public static class AgronomyPatches
 	{
+		private const string CrystallineRadicleBlueprint = "Crystalline Radicle";
+		private const string CrystallineRadicleIconTile = "Tiles2/Roots/base_ew.png";
+
+		public static void RepairCrystallineRadicleIconPostfix()
+		{
+			RepairCrystallineRadicleIcon();
+		}
+
+		public static void RepairCrystallineRadicleIcon()
+		{
+			if (Notitia.Categories == null)
+				return;
+
+			foreach (var category in Notitia.Categories.Values)
+			{
+				if (category?.AllBlueprints == null)
+					continue;
+
+				foreach (var blueprint in category.AllBlueprints)
+				{
+					if (!string.Equals(blueprint?.Value?.Name, CrystallineRadicleBlueprint, StringComparison.Ordinal))
+						continue;
+
+					ApplyCrystallineRadicleIcon(blueprint.Icon);
+				}
+			}
+		}
+
+		private static void ApplyCrystallineRadicleIcon(ConsoleChar icon)
+		{
+			if (icon == null)
+				return;
+
+			icon.Tile = CrystallineRadicleIconTile;
+			icon.Foreground = CLD_MAG;
+			icon.Background = CLD_BLK;
+			icon.Detail = CLD_YEL;
+		}
+
 		private static string GetBlueprintName(HearthpyreBlueprint blueprint)
 		{
 			return blueprint?.Blueprint ?? blueprint?.ParentObject?.Blueprint;
