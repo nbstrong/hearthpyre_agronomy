@@ -409,6 +409,7 @@ namespace HearthpyreAgronomy
 			public AgronomyCatalog.Entry Entry;
 			public GameObject Required;
 			public Cell Cell;
+			public List<GameObject> BeforeObjects;
 		}
 
 		public static void RepairCrystallineRadicleIconPostfix()
@@ -454,7 +455,7 @@ namespace HearthpyreAgronomy
 			return blueprint?.Blueprint ?? blueprint?.ParentObject?.Blueprint;
 		}
 
-		public static bool BuildPrefix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, ref BuildState __state)
+		private static bool BuildPrefix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, ref BuildState __state)
 		{
 			var blueprint = GetBlueprintName(__instance);
 			if (!AgronomyCatalog.TryGetDeclared(blueprint, out var declared))
@@ -491,13 +492,14 @@ namespace HearthpyreAgronomy
 			{
 				Entry = declared,
 				Required = required,
-				Cell = cell
+				Cell = cell,
+				BeforeObjects = cell.Objects.ToList()
 			};
 
 			return true;
 		}
 
-		public static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
+		private static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
 		{
 			if (!__result || __state == null || __state.Entry == null)
 				return;
@@ -506,11 +508,21 @@ namespace HearthpyreAgronomy
 			if (cell == null)
 				return;
 
-			var obj = cell.Objects.FirstOrDefault(x => string.Equals(x?.Blueprint, __state.Entry.Blueprint, StringComparison.Ordinal));
+			var before = __state.BeforeObjects ?? new List<GameObject>();
+			var obj = cell.Objects.FirstOrDefault(x => !before.Contains(x) && string.Equals(x?.Blueprint, __state.Entry.Blueprint, StringComparison.Ordinal));
 			if (obj == null)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not identify the plant created by HearthpyreBlueprint.Build for " + __state.Entry.Blueprint + ".");
+				__result = false;
 				return;
+			}
 
-			__state.Required?.SplitFromStack().Destroy(Silent: true);
+			var required = __state.Required;
+			if (required != null)
+			{
+				required = required.SplitFromStack();
+				required.Destroy(Silent: true);
+			}
 
 			ApplyGrowth(obj, __state.Entry);
 		}
