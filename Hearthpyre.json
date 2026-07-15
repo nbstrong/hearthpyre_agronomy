@@ -11,7 +11,7 @@
         {"Name": "Dreadroot", "Value": "Dreadroot", "HarvestInto": "Dreadroot Tuber", "HValue": 5},
         {"Name": "Fractus", "Value": "Fracti", "HarvestInto": "Spine Fruit", "HValue": 0.1},
         {"Name": "Grave Moss", "Value": "Grave Moss", "HarvestInto": "Clump of Grave Moss", "HValue": 0.01},
-        {"Name": "Lagroot", "Value": "Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50},
+        {"Name": "Lagroot", "Value": "Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50, "AlwaysVisible": true},
         {"Name": "Lahbloom", "Value": "Lahbloom", "HarvestInto": "Lah Petals", "HValue": 0.01},
         {"Name": "Luminous Hoarshroom", "Value": "Luminous Hoarshroom", "HarvestInto": "Hoarshroom", "HValue": 70},
         {"Name": "Noisegrass", "Value": "Noisegrass", "HarvestInto": "Bundle of Noisegrass", "HValue": 50},
@@ -20,7 +20,7 @@
         {"Name": "Vantabud", "Value": "Vantabud", "HarvestInto": "Vanta Petals", "HValue": 0.01},
         {"Name": "Watervine", "Value": "Watervine", "HarvestInto": "Vinewafer", "HValue": 0.01},
         {"Name": "Witchwood Tree", "Value": "Witchwood Tree", "HarvestInto": "Witchwood Bark", "HValue": 4},
-        {"Name": "Yonderbrush", "Value": "Yonderbrush", "HarvestInto": "Yondercane", "HValue": 100},
+        {"Name": "Yonderbrush", "Value": "Yonderbrush", "HarvestInto": "Yondercane", "HValue": 100, "AlwaysVisible": true},
         {"Name": "Young Crystalline Root", "Value": "Crystalline Radicle", "HarvestInto": "Crystal of Eve", "HValue": 475},
         {"Name": "Yuckwheat", "Value": "Yuckwheat", "HarvestInto": "Yuckwheat Stem", "HValue": 10}
       ]

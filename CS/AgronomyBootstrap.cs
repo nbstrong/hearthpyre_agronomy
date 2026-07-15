@@ -167,6 +167,7 @@ namespace HearthpyreAgronomy
 			public string Name;
 			public string Blueprint;
 			public string HarvestInto;
+			public bool AlwaysVisible;
 			public double HValue;
 			public bool Valid;
 			public string ValidationError;
@@ -224,6 +225,7 @@ namespace HearthpyreAgronomy
 							Name = node["Name"]?.Value ?? blueprint,
 							Blueprint = blueprint,
 							HarvestInto = node["HarvestInto"]?.Value,
+							AlwaysVisible = node["AlwaysVisible"]?.AsBool ?? false,
 							HValue = node["HValue"]?.AsDouble ?? double.NaN
 						};
 
@@ -466,6 +468,8 @@ namespace HearthpyreAgronomy
 
 		private static void ApplyGrowth(GameObject obj, AgronomyCatalog.Entry entry)
 		{
+			ApplyPlayerBuiltVisibility(obj, entry);
+
 			if (!obj.TryGetPart(out Harvestable harvestable)) return;
 
 			harvestable.DestroyOnHarvest = false;
@@ -478,6 +482,21 @@ namespace HearthpyreAgronomy
 			harvestable.UpdateRipeStatus(false);
 			growth.ScheduleFromCurrentTime(currentTime);
 			growth.SyncGrowthState(currentTime);
+		}
+
+		private static void ApplyPlayerBuiltVisibility(GameObject obj, AgronomyCatalog.Entry entry)
+		{
+			if (!entry.AlwaysVisible)
+				return;
+
+			if (obj.TryGetPart(out Hidden hidden))
+			{
+				hidden.Reveal(Silent: true);
+				obj.RemovePart(hidden);
+			}
+
+			if (obj.Render != null)
+				obj.Render.Visible = true;
 		}
 
 		private static string GetRequiredItemPhrase(string blueprint)
