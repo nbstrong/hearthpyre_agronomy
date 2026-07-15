@@ -14,6 +14,7 @@
         {"Name": "Lagroot", "Value": "Lagroot", "HarvestInto": "Lagroot Tuber", "HValue": 50, "AlwaysVisible": true},
         {"Name": "Lahbloom", "Value": "Lahbloom", "HarvestInto": "Lah Petals", "HValue": 0.01},
         {"Name": "Luminous Hoarshroom", "Value": "Luminous Hoarshroom", "HarvestInto": "Hoarshroom", "HValue": 70},
+        {"Name": "Mushroom Case", "Value": "Mushroom Case", "HarvestInto": "Plump Mushroom", "HValue": 2},
         {"Name": "Noisegrass", "Value": "Noisegrass", "HarvestInto": "Bundle of Noisegrass", "HValue": 50},
         {"Name": "Starapple Tree", "Value": "Starapple Tree", "HarvestInto": "Starapple", "HValue": 0.1},
         {"Name": "Urberry Bush", "Value": "Urberry Bush", "HarvestInto": "Urberry", "HValue": 65},
