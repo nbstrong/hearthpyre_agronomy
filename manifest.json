@@ -1,7 +1,7 @@
 {
   "ID": "HearthpyreAgronomy",
-  "Title": "Hearthpyre Agronomy",
-  "Description": "An extension to Hearthpyre that adds plant cultivation to the xyloschemer.",
+  "Title": "Hearthpyre : Agronomy",
+  "Description": "An farming extension to Hearthpyre that adds plant cultivation to the xyloschemer.",
   "Version": "1.0.0",
   "Author": "nbstrong",
   "Dependencies": {
