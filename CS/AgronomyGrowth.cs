@@ -66,7 +66,13 @@ namespace XRL.World.Parts
 			return base.HandleEvent(E);
 		}
 
-		public override bool WantTurnTick() => true;
+		public override bool WantTurnTick()
+		{
+			return GrowthTurns > 0
+			       && ParentObject != null
+			       && ParentObject.TryGetPart(out Harvestable harvestable)
+			       && !harvestable.Ripe;
+		}
 
 		public override void TurnTick(long TimeTick, int Amount)
 		{
