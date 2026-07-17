@@ -86,7 +86,11 @@ namespace HearthpyreAgronomy
 
 			try
 			{
-				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix)));
+				Harmony.Patch(
+					target,
+					prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPrefix)),
+					postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix))
+				);
 				return true;
 			}
 			catch (Exception e)
@@ -506,9 +510,14 @@ namespace HearthpyreAgronomy
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
 		}
 
-		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool newRipeStatus)
+		public static void UpdateRipeStatusPrefix(Harvestable __instance, ref bool __state)
 		{
-			if (newRipeStatus) return;
+			__state = __instance?.Ripe ?? false;
+		}
+
+		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool newRipeStatus, bool __state)
+		{
+			if (newRipeStatus || !__state) return;
 			if (__instance?.ParentObject == null) return;
 			if (!__instance.ParentObject.TryGetPart(out AgronomyGrowth growth)) return;
 
@@ -527,8 +536,9 @@ namespace HearthpyreAgronomy
 
 			var currentTime = The.Game?.TimeTicks ?? 0L;
 			var growth = obj.IncludePart<AgronomyGrowth>();
-			growth.Configure(entry.GrowthTurns);
 			harvestable.UpdateRipeStatus(false);
+			growth.Configure(entry.GrowthTurns);
+			growth.ScheduleFromCurrentTime(currentTime);
 			growth.ReconcileGrowthState(currentTime);
 		}
 

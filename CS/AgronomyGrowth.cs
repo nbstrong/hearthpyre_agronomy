@@ -81,7 +81,6 @@ namespace XRL.World.Parts
 		public void ScheduleFromCurrentTime(long currentTime)
 		{
 			if (GrowthTurns <= 0) return;
-			if (ReadyTurn > currentTime) return;
 			ReadyTurn = currentTime + GrowthTurns;
 		}
 
