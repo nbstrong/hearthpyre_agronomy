@@ -27,9 +27,15 @@ namespace HearthpyreAgronomy
 
 			if (!AgronomyCatalog.Load()) return;
 			if (!PatchBuild()) return;
+			if (!PatchConstruction())
+			{
+				UnpatchBuild();
+				return;
+			}
 			if (!PatchGrowth())
 			{
 				UnpatchBuild();
+				UnpatchConstruction();
 				return;
 			}
 			if (!PatchNotitia())
@@ -62,7 +68,8 @@ namespace HearthpyreAgronomy
 				Harmony.Patch(
 					target,
 					prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPrefix)),
-					postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPostfix))
+					postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildPostfix)),
+					finalizer: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.BuildFinalizer))
 				);
 				return true;
 			}
@@ -96,6 +103,29 @@ namespace HearthpyreAgronomy
 			catch (Exception e)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy failed to patch Harvestable.UpdateRipeStatus(bool)", e);
+				return false;
+			}
+		}
+
+		private static bool PatchConstruction()
+		{
+			var target = AccessTools.Method(typeof(Cell), nameof(Cell.Construct), new[] { typeof(GameObject) });
+			if (target == null)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy could not patch Cell.Construct(GameObject); the signature may have changed.");
+				return false;
+			}
+
+			if (Harmony.GetPatchInfo(target)?.Owners?.Contains(Harmony.Id) == true) return true;
+
+			try
+			{
+				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ConstructPostfix)));
+				return true;
+			}
+			catch (Exception e)
+			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch Cell.Construct(GameObject)", e);
 				return false;
 			}
 		}
@@ -144,6 +174,14 @@ namespace HearthpyreAgronomy
 			if (target == null) return;
 			Harmony.Unpatch(target, HarmonyPatchType.Prefix, Harmony.Id);
 			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
+			Harmony.Unpatch(target, HarmonyPatchType.Finalizer, Harmony.Id);
+		}
+
+		private static void UnpatchConstruction()
+		{
+			var target = AccessTools.Method(typeof(Cell), nameof(Cell.Construct), new[] { typeof(GameObject) });
+			if (target == null) return;
+			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
 
 	}
@@ -171,7 +209,6 @@ namespace HearthpyreAgronomy
 	{
 		public sealed class Entry
 		{
-			public string Name;
 			public string Blueprint;
 			public string HarvestInto;
 			public string RequiredItemPhrase;
@@ -375,8 +412,11 @@ namespace HearthpyreAgronomy
 			public AgronomyCatalog.Entry Entry;
 			public GameObject Required;
 			public Cell Cell;
-			public List<GameObject> BeforeObjects;
+			public GameObject Constructed;
 		}
+
+		[ThreadStatic]
+		private static BuildState ActiveBuild;
 
 		public static void RepairCrystallineRadicleIconPostfix()
 		{
@@ -456,33 +496,29 @@ namespace HearthpyreAgronomy
 			{
 				Entry = declared,
 				Required = required,
-				Cell = cell,
-				BeforeObjects = cell.Objects.ToList()
+				Cell = cell
 			};
+			ActiveBuild = __state;
 
 			return true;
 		}
 
 		internal static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
 		{
-			if (!__result || __state == null || __state.Entry == null)
-				return;
-
-			var cell = __state.Cell ?? __instance?.ParentObject?.CurrentCell;
-			if (cell == null)
-				return;
-
-			var before = __state.BeforeObjects ?? new List<GameObject>();
-			var obj = cell.Objects.FirstOrDefault(x => !before.Contains(x) && string.Equals(x?.Blueprint, __state.Entry.Blueprint, StringComparison.Ordinal));
-			if (obj == null)
-			{
-				FailBuildSetup(__instance, Actor, Silent, __state.Entry, "the constructed plant could not be identified");
-				__result = false;
-				return;
-			}
-
 			try
 			{
+				if (!__result || __state == null || __state.Entry == null)
+					return;
+
+				var cell = __state.Cell ?? __instance?.ParentObject?.CurrentCell;
+				var obj = __state.Constructed;
+				if (cell == null || obj == null)
+				{
+					FailBuildSetup(__instance, Actor, Silent, __state.Entry, "the constructed plant could not be captured", refundCharge: false);
+					__result = false;
+					return;
+				}
+
 				if (!ApplyGrowth(obj, __state.Entry))
 				{
 					RollbackConfiguredPlant(cell, obj);
@@ -505,6 +541,25 @@ namespace HearthpyreAgronomy
 				FailBuildSetup(__instance, Actor, Silent, __state.Entry, "post-build setup failed");
 				__result = false;
 			}
+			finally
+			{
+				if (ReferenceEquals(ActiveBuild, __state)) ActiveBuild = null;
+			}
+		}
+
+		internal static void ConstructPostfix(Cell __instance, GameObject __result)
+		{
+			if (ActiveBuild == null || ActiveBuild.Constructed != null || __result == null) return;
+			if (!ReferenceEquals(__instance, ActiveBuild.Cell)) return;
+			if (!string.Equals(__result.Blueprint, ActiveBuild.Entry.Blueprint, StringComparison.Ordinal)) return;
+
+			ActiveBuild.Constructed = __result;
+		}
+
+		internal static Exception BuildFinalizer(Exception __exception, BuildState __state)
+		{
+			if (ReferenceEquals(ActiveBuild, __state)) ActiveBuild = null;
+			return __exception;
 		}
 
 		public static void ShortDescriptionPostfix(HearthpyreBlueprint __instance, GetShortDescriptionEvent E)
@@ -558,9 +613,9 @@ namespace HearthpyreAgronomy
 			}
 		}
 
-		private static void FailBuildSetup(HearthpyreBlueprint blueprint, GameObject actor, bool silent, AgronomyCatalog.Entry entry, string reason)
+		private static void FailBuildSetup(HearthpyreBlueprint blueprint, GameObject actor, bool silent, AgronomyCatalog.Entry entry, string reason, bool refundCharge = true)
 		{
-			var refunded = RefundBuildCharge(blueprint, actor);
+			var refunded = refundCharge && RefundBuildCharge(blueprint, actor);
 			var message = "HearthpyreAgronomy could not build " + entry.Blueprint + ": " + reason + ". Your ingredient was not consumed" + (refunded ? " and the xyloschemer charge was refunded." : ".");
 			MetricsManager.LogError(message);
 			if (!silent && actor != null)

@@ -21,7 +21,7 @@ Hearthpyre Agronomy is a finished extension mod for Caves of Qud that adds a ded
 
 ## Requirements
 
-- Caves of Qud
+- Caves of Qud: the exact game build has not yet been verified in-game for this unreleased version
 - Hearthpyre `2.2.3` exactly
 - A mod loader setup that can load both mods together
 
@@ -44,20 +44,29 @@ manifest range.
 - `CS/AgronomyBootstrap.cs` hooks the Hearthpyre blueprint build path and validates the catalog.
 - `CS/AgronomyGrowth.cs` stores regrowth deadlines and reconciles them against global game time.
 
-## Build and Package
+## Package and Validate
 
-Set `QudManaged` to the Caves of Qud managed-assembly directory, then run:
+The release package is source-only. Include `manifest.json`, `Hearthpyre.json`, `CS/`,
+`README.md`, `CHANGELOG.md`, and `LICENSE`; exclude `bin/`, `obj/`, and any separately
+compiled Agronomy DLL.
+
+Install Hearthpyre `2.2.3` and this package in Caves of Qud, then let the game compile the
+mods. Before publishing, verify the Qud mod build log contains no Agronomy compiler errors and
+complete the in-game checks below. Record the exact Caves of Qud build with that verification.
+
+## Optional IDE Build
+
+`HearthpyreAgronomy.csproj` is an optional development aid. It requires a sibling
+`../hearthpyre` checkout and `QudManaged` set to the Caves of Qud managed-assembly directory:
 
 ```bash
 dotnet build HearthpyreAgronomy.csproj -p:QudManaged=/path/to/CavesOfQud/Qud_Data/Managed
 ```
 
-For a release package, include `manifest.json`, `Hearthpyre.json`, `CS/`, the compiled
-assembly, `README.md`, `CHANGELOG.md`, and `LICENSE`. Do not include `bin/` or `obj/`.
-
 ## Release Checks
 
-- Build from a clean checkout with Hearthpyre `2.2.3`.
+- Package source-only files and let Caves of Qud compile them with Hearthpyre `2.2.3`.
+- Verify the Qud mod build log contains no Agronomy compiler errors.
 - Start a new game and load a save created before the release.
 - Build with stacked and missing ingredients; confirm a failed post-build setup removes the
   constructed plant, retains the ingredient, and refunds available xyloschemer charge.
@@ -65,6 +74,9 @@ assembly, `README.md`, `CHANGELOG.md`, and `LICENSE`. Do not include `bin/` or `
 - Leave, reactivate, freeze, thaw, and reload a zone containing growing plants.
 - Verify a blueprint appearing in another Hearthpyre category does not receive Agronomy behavior.
 - Install alongside another Hearthpyre extension, then smoke-test the packaged mod.
+
+The package has not yet been game-compiled or smoke-tested in this checkout. Do not publish
+`1.0.0` until the exact Caves of Qud build and completed checklist are recorded here.
 
 ## Notes
 
