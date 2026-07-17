@@ -109,7 +109,7 @@ namespace HearthpyreAgronomy
 
 		private static bool PatchConstruction()
 		{
-			var target = AccessTools.Method(typeof(Cell), nameof(Cell.Construct), new[] { typeof(GameObject) });
+			var target = AccessTools.Method(typeof(Cell), "Construct", new[] { typeof(GameObject) });
 			if (target == null)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not patch Cell.Construct(GameObject); the signature may have changed.");
@@ -179,7 +179,7 @@ namespace HearthpyreAgronomy
 
 		private static void UnpatchConstruction()
 		{
-			var target = AccessTools.Method(typeof(Cell), nameof(Cell.Construct), new[] { typeof(GameObject) });
+			var target = AccessTools.Method(typeof(Cell), "Construct", new[] { typeof(GameObject) });
 			if (target == null) return;
 			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
@@ -505,13 +505,15 @@ namespace HearthpyreAgronomy
 
 		internal static void BuildPostfix(HearthpyreBlueprint __instance, GameObject Actor, bool Silent, ref bool __result, BuildState __state)
 		{
+			Cell cell = null;
+			GameObject obj = null;
 			try
 			{
 				if (!__result || __state == null || __state.Entry == null)
 					return;
 
-				var cell = __state.Cell ?? __instance?.ParentObject?.CurrentCell;
-				var obj = __state.Constructed;
+				cell = __state.Cell ?? __instance?.ParentObject?.CurrentCell;
+				obj = __state.Constructed;
 				if (cell == null || obj == null)
 				{
 					FailBuildSetup(__instance, Actor, Silent, __state.Entry, "the constructed plant could not be captured", refundCharge: false);
