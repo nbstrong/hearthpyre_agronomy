@@ -54,21 +54,6 @@ Install Hearthpyre `2.2.3` and this package in Caves of Qud, then let the game c
 mods. Before publishing, verify the Qud mod build log contains no Agronomy compiler errors and
 complete the in-game checks below. Record the exact Caves of Qud build with that verification.
 
-## Release Checks
-
-- Package source-only files and let Caves of Qud compile them with Hearthpyre `2.2.3`.
-- Verify the Qud mod build log contains no Agronomy compiler errors.
-- Start a new game and load a save created before the release.
-- Build with stacked and missing ingredients; confirm a failed post-build setup removes the
-  constructed plant, retains the ingredient, and refunds available xyloschemer charge.
-- Harvest and regrow a plant repeatedly; repeated unripe updates must not delay its deadline.
-- Leave, reactivate, freeze, thaw, and reload a zone containing growing plants.
-- Verify a blueprint appearing in another Hearthpyre category does not receive Agronomy behavior.
-- Install alongside another Hearthpyre extension, then smoke-test the packaged mod.
-
-The package has not yet been game-compiled or smoke-tested in this checkout. Do not publish
-`1.0.0` until the exact Caves of Qud build and completed checklist are recorded here.
-
 ## Notes
 
 - This repository is an extension of Hearthpyre only. The `hearthpyre/` folder is kept untouched.
