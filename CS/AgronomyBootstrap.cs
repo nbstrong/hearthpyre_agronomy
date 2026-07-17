@@ -109,10 +109,10 @@ namespace HearthpyreAgronomy
 
 		private static bool PatchConstruction()
 		{
-			var target = AccessTools.Method(typeof(Cell), "Construct", new[] { typeof(GameObject) });
+			var target = AccessTools.Method(typeof(Extensions), "Construct", new[] { typeof(Cell), typeof(GameObject) });
 			if (target == null)
 			{
-				MetricsManager.LogError("HearthpyreAgronomy could not patch Cell.Construct(GameObject); the signature may have changed.");
+				MetricsManager.LogError("HearthpyreAgronomy could not patch Hearthpyre.Extensions.Construct(Cell, GameObject); the signature may have changed.");
 				return false;
 			}
 
@@ -125,7 +125,7 @@ namespace HearthpyreAgronomy
 			}
 			catch (Exception e)
 			{
-				MetricsManager.LogError("HearthpyreAgronomy failed to patch Cell.Construct(GameObject)", e);
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch Hearthpyre.Extensions.Construct(Cell, GameObject)", e);
 				return false;
 			}
 		}
@@ -179,7 +179,7 @@ namespace HearthpyreAgronomy
 
 		private static void UnpatchConstruction()
 		{
-			var target = AccessTools.Method(typeof(Cell), "Construct", new[] { typeof(GameObject) });
+			var target = AccessTools.Method(typeof(Extensions), "Construct", new[] { typeof(Cell), typeof(GameObject) });
 			if (target == null) return;
 			Harmony.Unpatch(target, HarmonyPatchType.Postfix, Harmony.Id);
 		}
@@ -549,10 +549,10 @@ namespace HearthpyreAgronomy
 			}
 		}
 
-		internal static void ConstructPostfix(Cell __instance, GameObject __result)
+		internal static void ConstructPostfix(Cell __0, GameObject __result)
 		{
 			if (ActiveBuild == null || ActiveBuild.Constructed != null || __result == null) return;
-			if (!ReferenceEquals(__instance, ActiveBuild.Cell)) return;
+			if (!ReferenceEquals(__0, ActiveBuild.Cell)) return;
 			if (!string.Equals(__result.Blueprint, ActiveBuild.Entry.Blueprint, StringComparison.Ordinal)) return;
 
 			ActiveBuild.Constructed = __result;
