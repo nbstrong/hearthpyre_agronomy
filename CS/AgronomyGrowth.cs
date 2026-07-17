@@ -7,8 +7,9 @@ namespace XRL.World.Parts
 	[Serializable]
 	public sealed class AgronomyGrowth : IPart
 	{
-		public long GrowthTurns;
-		public long ReadyTurn;
+		// These are written explicitly so future save-schema changes remain intentional.
+		private long GrowthTurns;
+		private long ReadyTurn;
 
 		public override bool AllowStaticRegistration() => true;
 
@@ -78,9 +79,10 @@ namespace XRL.World.Parts
 			GrowthTurns = growthTurns;
 		}
 
-		public void ScheduleFromCurrentTime(long currentTime)
+		public void ScheduleFromCurrentTime(long currentTime, bool wasRipe)
 		{
 			if (GrowthTurns <= 0) return;
+			if (!wasRipe && ReadyTurn > currentTime) return;
 			ReadyTurn = currentTime + GrowthTurns;
 		}
 

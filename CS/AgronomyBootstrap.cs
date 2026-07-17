@@ -86,7 +86,11 @@ namespace HearthpyreAgronomy
 
 			try
 			{
-				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix)));
+				Harmony.Patch(
+					target,
+					prefix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPrefix)),
+					postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.UpdateRipeStatusPostfix))
+				);
 				return true;
 			}
 			catch (Exception e)
@@ -108,8 +112,9 @@ namespace HearthpyreAgronomy
 				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.RepairCrystallineRadicleIconPostfix)));
 				return true;
 			}
-			catch
+			catch (Exception e)
 			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch Notitia.Init", e);
 				return false;
 			}
 		}
@@ -126,8 +131,9 @@ namespace HearthpyreAgronomy
 				Harmony.Patch(target, postfix: new HarmonyMethod(typeof(AgronomyPatches), nameof(AgronomyPatches.ShortDescriptionPostfix)));
 				return true;
 			}
-			catch
+			catch (Exception e)
 			{
+				MetricsManager.LogError("HearthpyreAgronomy failed to patch HearthpyreBlueprint.HandleEvent(GetShortDescriptionEvent)", e);
 				return false;
 			}
 		}
@@ -194,7 +200,6 @@ namespace HearthpyreAgronomy
 			var loadedBlueprints = new Dictionary<string, Entry>(StringComparer.Ordinal);
 			var foundFile = false;
 			var foundCatalog = false;
-			var loadFailed = false;
 			var validEntryCount = 0;
 
 			ModManager.ForEachFile("Hearthpyre.json", (file, mod) =>
@@ -209,7 +214,6 @@ namespace HearthpyreAgronomy
 					var data = JSON.Parse(File.ReadAllText(file)) as JSONClass;
 					if (data == null)
 					{
-						loadFailed = true;
 						MetricsManager.LogError("HearthpyreAgronomy failed to load " + file + " because it is not a JSON object.");
 						return;
 					}
@@ -229,7 +233,6 @@ namespace HearthpyreAgronomy
 
 						var entry = new Entry
 						{
-							Name = node["Name"]?.Value ?? blueprint,
 							Blueprint = blueprint,
 							HarvestInto = node["HarvestInto"]?.Value,
 							AlwaysVisible = node["AlwaysVisible"]?.AsBool ?? false,
@@ -254,20 +257,13 @@ namespace HearthpyreAgronomy
 				}
 				catch (Exception e)
 				{
-					loadFailed = true;
-					MetricsManager.LogError("HearthpyreAgronomy failed to load Hearthpyre.json", e);
+					MetricsManager.LogError("HearthpyreAgronomy skipped malformed Hearthpyre.json at " + file + ".", e);
 				}
 			});
 
 			if (!foundFile)
 			{
 				MetricsManager.LogError("HearthpyreAgronomy could not find any approved Hearthpyre.json files.");
-				return false;
-			}
-
-			if (loadFailed)
-			{
-				MetricsManager.LogError("HearthpyreAgronomy did not finish loading because at least one Hearthpyre.json file could not be loaded.");
 				return false;
 			}
 
@@ -310,8 +306,6 @@ namespace HearthpyreAgronomy
 			entry = null;
 			return false;
 		}
-
-		public static bool IsAgronomy(string blueprint) => TryGet(blueprint, out _);
 
 		private static bool ValidateEntry(string file, Entry entry)
 		{
@@ -482,18 +476,35 @@ namespace HearthpyreAgronomy
 			var obj = cell.Objects.FirstOrDefault(x => !before.Contains(x) && string.Equals(x?.Blueprint, __state.Entry.Blueprint, StringComparison.Ordinal));
 			if (obj == null)
 			{
-				MetricsManager.LogError("HearthpyreAgronomy could not identify the plant created by HearthpyreBlueprint.Build for " + __state.Entry.Blueprint + ".");
+				FailBuildSetup(__instance, Actor, Silent, __state.Entry, "the constructed plant could not be identified");
+				__result = false;
 				return;
 			}
 
-			var required = __state.Required;
-			if (required != null)
+			try
 			{
-				required = required.SplitFromStack();
-				required.Destroy(Silent: true);
-			}
+				if (!ApplyGrowth(obj, __state.Entry))
+				{
+					RollbackConfiguredPlant(cell, obj);
+					FailBuildSetup(__instance, Actor, Silent, __state.Entry, "the constructed plant could not be configured");
+					__result = false;
+					return;
+				}
 
-			ApplyGrowth(obj, __state.Entry);
+				var required = __state.Required;
+				if (required != null)
+				{
+					required = required.SplitFromStack();
+					required.Destroy(Silent: true);
+				}
+			}
+			catch (Exception e)
+			{
+				RollbackConfiguredPlant(cell, obj);
+				MetricsManager.LogError("HearthpyreAgronomy failed to configure " + __state.Entry.Blueprint + " after construction.", e);
+				FailBuildSetup(__instance, Actor, Silent, __state.Entry, "post-build setup failed");
+				__result = false;
+			}
 		}
 
 		public static void ShortDescriptionPostfix(HearthpyreBlueprint __instance, GetShortDescriptionEvent E)
@@ -506,20 +517,25 @@ namespace HearthpyreAgronomy
 			E.Postfix.Append("\n{{g|Grows in }}").Append(entry.GrowthDays).Append(entry.GrowthDays == 1 ? " day." : " days.");
 		}
 
-		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool newRipeStatus)
+		public static void UpdateRipeStatusPrefix(Harvestable __instance, ref bool __state)
+		{
+			__state = __instance?.Ripe ?? false;
+		}
+
+		public static void UpdateRipeStatusPostfix(Harvestable __instance, bool newRipeStatus, bool __state)
 		{
 			if (newRipeStatus) return;
 			if (__instance?.ParentObject == null) return;
 			if (!__instance.ParentObject.TryGetPart(out AgronomyGrowth growth)) return;
 
-			growth.ScheduleFromCurrentTime(The.Game?.TimeTicks ?? 0L);
+			growth.ScheduleFromCurrentTime(The.Game?.TimeTicks ?? 0L, __state);
 		}
 
-		private static void ApplyGrowth(GameObject obj, AgronomyCatalog.Entry entry)
+		private static bool ApplyGrowth(GameObject obj, AgronomyCatalog.Entry entry)
 		{
 			ApplyPlayerBuiltVisibility(obj, entry);
 
-			if (!obj.TryGetPart(out Harvestable harvestable)) return;
+			if (!obj.TryGetPart(out Harvestable harvestable)) return false;
 
 			harvestable.DestroyOnHarvest = false;
 			harvestable.RegenTime = string.Empty;
@@ -530,6 +546,48 @@ namespace HearthpyreAgronomy
 			growth.Configure(entry.GrowthTurns);
 			harvestable.UpdateRipeStatus(false);
 			growth.ReconcileGrowthState(currentTime);
+			return true;
+		}
+
+		private static void RollbackConfiguredPlant(Cell cell, GameObject obj)
+		{
+			if (cell != null && obj != null)
+			{
+				cell.RemoveObject(obj);
+				obj.Destroy(Silent: true);
+			}
+		}
+
+		private static void FailBuildSetup(HearthpyreBlueprint blueprint, GameObject actor, bool silent, AgronomyCatalog.Entry entry, string reason)
+		{
+			var refunded = RefundBuildCharge(blueprint, actor);
+			var message = "HearthpyreAgronomy could not build " + entry.Blueprint + ": " + reason + ". Your ingredient was not consumed" + (refunded ? " and the xyloschemer charge was refunded." : ".");
+			MetricsManager.LogError(message);
+			if (!silent && actor != null)
+			{
+				actor.Failure(message);
+			}
+		}
+
+		private static bool RefundBuildCharge(HearthpyreBlueprint blueprint, GameObject actor)
+		{
+			if (blueprint == null || actor == null) return false;
+
+			var xyloschemer = actor.GetItemWithBlueprint(OBJ_SCMR);
+			var part = xyloschemer?.GetPart<HearthpyreXyloschemer>();
+			if (part == null) return false;
+
+			var charge = RoundToInt(blueprint.Cost * part.ChargeMult);
+			if (charge <= 0) return true;
+
+			foreach (var rechargeable in xyloschemer.GetPartsDescendedFrom<IRechargeable>())
+			{
+				if (!rechargeable.CanBeRecharged()) continue;
+				rechargeable.AddCharge(charge);
+				return true;
+			}
+
+			return false;
 		}
 
 		private static void ApplyPlayerBuiltVisibility(GameObject obj, AgronomyCatalog.Entry entry)

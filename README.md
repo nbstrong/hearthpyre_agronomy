@@ -17,13 +17,18 @@ Hearthpyre Agronomy is a finished extension mod for Caves of Qud that adds a ded
   - every successful harvest starts the same growth timer again
   - zones can be left, suspended, thawed, and reloaded without losing the deadline
 - Startup validation for blueprint and ingredient IDs
-- Guardrails for duplicate and normalized catalog collisions
+- Guardrails for duplicate blueprint names in the Agronomy catalog
 
 ## Requirements
 
 - Caves of Qud
-- Hearthpyre `2.2.3` or newer
+- Hearthpyre `2.2.3` exactly
 - A mod loader setup that can load both mods together
+
+The dependency is intentionally capped at Hearthpyre `2.2.3`, the release whose
+`HearthpyreBlueprint.Build(GameObject, bool)` and `Harvestable.UpdateRipeStatus(bool)`
+signatures this extension patches. Test a newer Hearthpyre release before widening the
+manifest range.
 
 ## Installation
 
@@ -38,6 +43,28 @@ Hearthpyre Agronomy is a finished extension mod for Caves of Qud that adds a ded
 - `Hearthpyre.json` defines the Agronomy catalog data.
 - `CS/AgronomyBootstrap.cs` hooks the Hearthpyre blueprint build path and validates the catalog.
 - `CS/AgronomyGrowth.cs` stores regrowth deadlines and reconciles them against global game time.
+
+## Build and Package
+
+Set `QudManaged` to the Caves of Qud managed-assembly directory, then run:
+
+```bash
+dotnet build HearthpyreAgronomy.csproj -p:QudManaged=/path/to/CavesOfQud/Qud_Data/Managed
+```
+
+For a release package, include `manifest.json`, `Hearthpyre.json`, `CS/`, the compiled
+assembly, `README.md`, `CHANGELOG.md`, and `LICENSE`. Do not include `bin/` or `obj/`.
+
+## Release Checks
+
+- Build from a clean checkout with Hearthpyre `2.2.3`.
+- Start a new game and load a save created before the release.
+- Build with stacked and missing ingredients; confirm a failed post-build setup removes the
+  constructed plant, retains the ingredient, and refunds available xyloschemer charge.
+- Harvest and regrow a plant repeatedly; repeated unripe updates must not delay its deadline.
+- Leave, reactivate, freeze, thaw, and reload a zone containing growing plants.
+- Verify a blueprint appearing in another Hearthpyre category does not receive Agronomy behavior.
+- Install alongside another Hearthpyre extension, then smoke-test the packaged mod.
 
 ## Notes
 
