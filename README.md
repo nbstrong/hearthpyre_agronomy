@@ -54,15 +54,6 @@ Install Hearthpyre `2.2.3` and this package in Caves of Qud, then let the game c
 mods. Before publishing, verify the Qud mod build log contains no Agronomy compiler errors and
 complete the in-game checks below. Record the exact Caves of Qud build with that verification.
 
-## Optional IDE Build
-
-`HearthpyreAgronomy.csproj` is an optional development aid. It requires a sibling
-`../hearthpyre` checkout and `QudManaged` set to the Caves of Qud managed-assembly directory:
-
-```bash
-dotnet build HearthpyreAgronomy.csproj -p:QudManaged=/path/to/CavesOfQud/Qud_Data/Managed
-```
-
 ## Release Checks
 
 - Package source-only files and let Caves of Qud compile them with Hearthpyre `2.2.3`.
