@@ -4,7 +4,9 @@
   "Description": "A farming extension to Hearthpyre that adds plant cultivation to the xyloschemer.",
   "Version": "1.0.0",
   "Author": "nbstrong",
+  "PreviewImage": "qud_farmer.png",
+  "Tags": "Hearthpyre,Farming,Settlement",
   "Dependencies": {
-    "Hearthpyre": "2.2.3 - *"
+    "Hearthpyre": "2.2.3 - 2.2.3"
   }
 }

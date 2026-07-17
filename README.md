@@ -1,45 +1,60 @@
-# Hearthpyre Agronomy
+# Hearthpyre : Agronomy
 
-Hearthpyre Agronomy is a finished extension mod for Caves of Qud that adds a dedicated `Agronomy` category to the Hearthpyre xyloschemer. It lets you place Harvestry plants as settlement infrastructure and turns each plant into a repeatable, inventory-gated build option.
+![A cultivated Hearthpyre settlement](qud_farm.png)
 
-## What It Adds
+Put down roots.
 
-- A new xyloschemer category named `Agronomy`
-- Harvestry plants from the Caves of Qud wiki, with unsupported edge cases omitted
-- A build requirement for each plant:
-  - the blueprint is placed normally
-  - building the plant requires one matching `HarvestInto` item in your inventory
-  - the required item is consumed only after the plant object is successfully created
-  - the normal tier-based xyloschemer charge cost is still paid for the build
-- Persistent regrowth based on absolute game time
-  - newly built plants start unripe
-  - the first harvestable state arrives after the plant's `H Value`, with a minimum of 1 day
-  - every successful harvest starts the same growth timer again
-  - zones can be left, suspended, thawed, and reloaded without losing the deadline
-- Startup validation for blueprint and ingredient IDs
-- Guardrails for duplicate and normalized catalog collisions
+Hearthpyre : Agronomy extends the xyloschemer with a dedicated **Agronomy** category, turning the harvestables of Qud into a lasting settlement garden. Plot cultivated plants beside your homes and workshops, tend them through each growth cycle, and harvest the results again and again.
+
+## Cultivation
+
+- Build a living farm with supported Harvestry plants.
+- Place Agronomy blueprints through the xyloschemer alongside Hearthpyre's other schemes.
+- Build each plot with one matching harvested item, such as a seed, tuber, fruit, or bundle.
+- Plants begin unripe and regrow after the listed number of days.
+- Harvested plants remain in place and begin a new growth cycle.
+- Growth uses absolute game time, so elapsed time is preserved while zones are unloaded, reactivated, frozen, thawed, or reloaded.
+
+## Cultivation Catalog
+
+| Plant | Build with | Ripens in |
+| --- | --- | ---: |
+| Arsplice hyphae | Arsplice seed | 350 days |
+| Banana tree | Banana | 8 days |
+| Bop sponge | Bop cheek | 50 days |
+| Dreadroot | Dreadroot tuber | 5 days |
+| Fractus | Spine fruit | 1 day |
+| Grave moss | Clump of grave moss | 1 day |
+| Lagroot | Lagroot tuber | 50 days |
+| Lahbloom | Lah petals | 1 day |
+| Luminous hoarshroom | Hoarshroom | 70 days |
+| Noisegrass | Bundle of noisegrass | 50 days |
+| Starapple tree | Starapple | 1 day |
+| Urberry bush | Urberry | 65 days |
+| Vantabud | Vanta petals | 1 day |
+| Watervine | Vinewafer | 1 day |
+| Witchwood tree | Witchwood bark | 4 days |
+| Yonderbrush | Yondercane | 100 days |
+| Young crystalline root | Crystal of Eve | 475 days |
+| Yuckwheat | Yuckwheat stem | 10 days |
+
+## Getting Started
+
+1. Install and enable [Hearthpyre](https://steamcommunity.com/sharedfiles/filedetails/?id=1683847053) `2.2.3`.
+2. Install and enable Hearthpyre : Agronomy.
+3. Activate your xyloschemer and enter scheme mode.
+4. Select **Agronomy**, place a blueprint, then use it to build the plant.
+5. Carry one matching harvested item to complete the build, then return when the crop has ripened.
 
 ## Requirements
 
 - Caves of Qud
-- Hearthpyre `2.2.3` or newer
-- A mod loader setup that can load both mods together
+- Hearthpyre `2.2.3`
 
-## Installation
+## Credits
 
-1. Put the `hearthpyre_agronomy` folder in your Caves of Qud `Mods` directory.
-2. Make sure `Hearthpyre` is installed and enabled.
-3. Enable `HearthpyreAgronomy`.
-4. Launch the game and open the xyloschemer scheme menu.
+Hearthpyre : Agronomy is an extension for [Hearthpyre](https://steamcommunity.com/sharedfiles/filedetails/?id=1683847053) by Armithaig.
 
-## Project Layout
+## Issues and Suggestions
 
-- `manifest.json` declares the mod metadata and the Hearthpyre dependency.
-- `Hearthpyre.json` defines the Agronomy catalog data.
-- `CS/AgronomyBootstrap.cs` hooks the Hearthpyre blueprint build path and validates the catalog.
-- `CS/AgronomyGrowth.cs` stores regrowth deadlines and reconciles them against global game time.
-
-## Notes
-
-- This repository is an extension of Hearthpyre only. The `hearthpyre/` folder is kept untouched.
-- The cultivated plants keep their native behavior unless the agronomy logic needs to override it for persistence.
+Report bugs or ideas through the [issue tracker](https://github.com/nbstrong/hearthpyre_agronomy/issues).
