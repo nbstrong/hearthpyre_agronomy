@@ -53,7 +53,7 @@ GETTING STARTED
 REQUIREMENTS
 
 - Caves of Qud
-- Hearthpyre 2.2.3
+- Hearthpyre 2.2.4 or greater
 
 CREDITS
 

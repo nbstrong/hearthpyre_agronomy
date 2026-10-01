@@ -49,7 +49,7 @@ Hearthpyre : Agronomy extends the xyloschemer with a dedicated **Agronomy** cate
 ## Requirements
 
 - Caves of Qud
-- Hearthpyre `2.2.3`
+- Hearthpyre `2.2.3` or greater
 
 ## Credits
 
