@@ -7,6 +7,6 @@
   "PreviewImage": "qud_farmer.png",
   "Tags": "Hearthpyre,Farming,Settlement",
   "Dependencies": {
-    "Hearthpyre": "2.2.3 - 2.2.3"
+    "Hearthpyre": "2.2.4 - *"
   }
 }
